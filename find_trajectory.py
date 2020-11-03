@@ -220,7 +220,8 @@ if __name__ == '__main__':
     )
 
     # Create a MultibodyPlant for the arm
-    file_name = "planar_arm.urdf"
+    # file_name = "planar_arm.urdf"
+    file_name = "leg.urdf"
     builder = DiagramBuilder()
     scene_graph = builder.AddSystem(SceneGraph())
     planar_arm = builder.AddSystem(MultibodyPlant(0.0))
