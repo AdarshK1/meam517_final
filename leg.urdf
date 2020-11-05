@@ -14,26 +14,10 @@
                 <izz>0.8369</izz>
             </inertia>
         </inertial>
-        <collision name='body_collision'>
-            <pose frame=''>0 0 0 0 -0 0</pose>
-            <geometry>
-                <box>
-                    <size>0.83 0.25 0.19</size>
-                </box>
-            </geometry>
-            <surface>
-                <contact>
-                    <ode/>
-                </contact>
-                <friction>
-                    <ode/>
-                </friction>
-            </surface>
-        </collision>
         <visual name='body_visual'>
             <pose frame=''>0 0 0 0 -0 0</pose>
             <geometry>
-                <box>
+                <box size="0.83 0.25 0.19">
                     <size>0.83 0.25 0.19</size>
                 </box>
             </geometry>
@@ -44,8 +28,6 @@
                 </script>
             </material>
         </visual>
-        <gravity>1</gravity>
-
     </link>
     <link name='hip0'>
         <pose frame=''>0.34385 0.092865 0 0 -0 0</pose>
@@ -61,26 +43,10 @@
                 <izz>0.015337</izz>
             </inertia>
         </inertial>
-        <collision name='hip0_collision'>
-            <pose frame=''>-0.01 -0.005 0 1.5708 -0 0</pose>
-            <geometry>
-                <box>
-                    <size>0.15 0.09 0.15</size>
-                </box>
-            </geometry>
-            <surface>
-                <contact>
-                    <ode/>
-                </contact>
-                <friction>
-                    <ode/>
-                </friction>
-            </surface>
-        </collision>
         <visual name='hip0_visual'>
             <pose frame=''>-0.01 -0.005 0 1.5708 -0 0</pose>
             <geometry>
-                <box>
+                <box size="0.15 0.09 0.15">
                     <size>0.15 0.09 0.15</size>
                 </box>
             </geometry>
@@ -91,12 +57,10 @@
                 </script>
             </material>
         </visual>
-        <gravity>1</gravity>
-        <velocity_decay/>
     </link>
     <joint name='body_hip' type='revolute'>
-        <child>hip0</child>
-        <parent>body</parent>
+        <child link="hip0">hip0</child>
+        <parent link="body">body</parent>
         <axis>
             <xyz>1 0 0</xyz>
             <limit>
@@ -128,26 +92,10 @@
                 <izz>0.0040625</izz>
             </inertia>
         </inertial>
-        <collision name='upper0_collision'>
-            <pose frame=''>-0.17 0 0 0 -0 0</pose>
-            <geometry>
-                <box>
-                    <size>0.34 0.055 0.075</size>
-                </box>
-            </geometry>
-            <surface>
-                <contact>
-                    <ode/>
-                </contact>
-                <friction>
-                    <ode/>
-                </friction>
-            </surface>
-        </collision>
         <visual name='upper0_visual'>
             <pose frame=''>-0.17 0 0 0 -0 0</pose>
             <geometry>
-                <box>
+                <box size="0.34 0.055 0.075">
                     <size>0.34 0.055 0.075</size>
                 </box>
             </geometry>
@@ -158,12 +106,10 @@
                 </script>
             </material>
         </visual>
-        <gravity>1</gravity>
-        <velocity_decay/>
     </link>
     <joint name='hip_upper' type='revolute'>
-        <child>upper0</child>
-        <parent>hip0</parent>
+        <child link="upper0">upper0</child>
+        <parent link="hip0">hip0</parent>
         <axis>
             <xyz>0 -1 0</xyz>
             <limit>
@@ -195,66 +141,10 @@
                 <izz>0.0125618</izz>
             </inertia>
         </inertial>
-        <collision name='lower0_collision'>
-            <pose frame=''>0.17035 0 0 3.14159 1.57079 3.14159</pose>
-            <geometry>
-                <cylinder>
-                    <length>0.3407</length>
-                    <radius>0.02</radius>
-                </cylinder>
-            </geometry>
-            <surface>
-                <contact>
-                    <ode/>
-                </contact>
-                <friction>
-                    <ode/>
-                </friction>
-            </surface>
-        </collision>
-        <collision name='lower0_fixed_joint_lump__toe0_collision_1'>
-            <pose frame=''>0.3407 0 0 0 -0 0</pose>
-            <geometry>
-                <sphere>
-                    <radius>0.0325</radius>
-                </sphere>
-            </geometry>
-            <surface>
-                <bounce>
-                    <restitution_coefficient>0</restitution_coefficient>
-                    <threshold>1e+06</threshold>
-                </bounce>
-                <friction>
-                    <torsional>
-                        <coefficient>0.3</coefficient>
-                    </torsional>
-                    <ode>
-                        <mu>20</mu>
-                        <mu2>10</mu2>
-                    </ode>
-                    <bullet>
-                        <rolling_friction>0.3</rolling_friction>
-                        <friction2>10</friction2>
-                    </bullet>
-                </friction>
-                <contact>
-                    <bullet>
-                        <kp>30000</kp>
-                        <kd>1000</kd>
-                        <split_impulse>1</split_impulse>
-                        <split_impulse_penetration_threshold>-0.01</split_impulse_penetration_threshold>
-                    </bullet>
-                    <ode>
-                        <kp>30000</kp>
-                        <kd>1000</kd>
-                    </ode>
-                </contact>
-            </surface>
-        </collision>
         <visual name='lower0_visual'>
             <pose frame=''>0.17035 0 0 3.14159 1.57079 3.14159</pose>
             <geometry>
-                <cylinder>
+                <cylinder length="0.3407" radius="0.02">
                     <length>0.3407</length>
                     <radius>0.02</radius>
                 </cylinder>
@@ -266,27 +156,10 @@
                 </script>
             </material>
         </visual>
-        <visual name='lower0_fixed_joint_lump__toe0_visual_1'>
-            <pose frame=''>0.3407 0 0 0 -0 0</pose>
-            <geometry>
-                <sphere>
-                    <radius>0.0325</radius>
-                </sphere>
-            </geometry>
-            <material>
-                <script>
-                    <name>Gazebo/DarkGray</name>
-                    <uri>file://media/materials/scripts/gazebo.material</uri>
-                </script>
-            </material>
-        </visual>
-        <velocity_decay/>
-        <gravity>1</gravity>
-        <velocity_decay/>
     </link>
     <joint name='upper_lower' type='revolute'>
-        <child>lower0</child>
-        <parent>upper0</parent>
+        <child link="lower0">lower0</child>
+        <parent link="upper0">upper0</parent>
         <axis>
             <xyz>0 1 0</xyz>
             <limit>

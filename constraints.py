@@ -8,6 +8,7 @@ def cos(theta):
 def sin(theta):
     return AutoDiffXd.sin(theta)
 
+
 def landing_constraint(vars):
     '''
     Impose a constraint such that if the ball is released at final state xf,
@@ -24,17 +25,12 @@ def landing_constraint(vars):
     vel = np.array([[-l*qdot[2]*cos(q[0] + q[1] + q[2]) + qdot[0]*(-l*cos(q[0]) - l*cos(q[0] + q[1]) - l*cos(q[0] + q[1] + q[2])) + qdot[1]*(-l*cos(q[0] + q[1]) - l*cos(q[0] + q[1] + q[2]))],
                     [l*qdot[2]*sin(q[0] + q[1] + q[2]) + qdot[0]*(l*sin(q[0]) + l*sin(q[0] + q[1]) + l*sin(q[0] + q[1] + q[2])) + qdot[1]*(l*sin(q[0] + q[1]) + l*sin(q[0] + q[1] + q[2]))]])
 
-    # TODO: Express the landing constraint as a function of q, qdot, and t_land
-    # constraint_eval[0]: Eq (15)
-    # print("pos", pos)
-    # print("vel", vel)
     constraint_eval[0] = (pos[1][0] + vel[1][0] * t_land - 0.5 * g * t_land **2)
     constraint_eval[1] = pos[0][0] + vel[0][0] * t_land
     constraint_eval[2] = pos[1][0]
-    # constraint_eval[1]: Eq (16)
-    # constraint_eval[2]: Eq (18)
 
     return constraint_eval
+
 
 def AddFinalLandingPositionConstraint(prog, xf, d, t_land):
 
@@ -73,27 +69,21 @@ def EvaluateDynamics(planar_arm, context, x, u):
     v_dot = M_inv @ (B @ u + g - C)
     return np.hstack((x[-3:], v_dot))
 
+
 def CollocationConstraintEvaluator(planar_arm, context, dt, x_i, u_i, x_ip1, u_ip1):
-    # print("called evaluator")
     h_i = np.zeros((6,), dtype=AutoDiffXd)
     # TODO: Evaluate the collocation constraint h using x_i, u_i, x_ip1, u_ip1, dt
     # You should make use of the EvaluateDynamics() function to compute f(x,u)
-    # print("context", context)
 
     f_dyn_i = EvaluateDynamics(planar_arm, context, x_i, u_i)
     f_dyn_ip1 = EvaluateDynamics(planar_arm, context, x_ip1, u_ip1)
 
-    # print(-0.125 * dt * (f_dyn_ip1 - f_dyn_i))
     x_c = -0.125 * dt * (f_dyn_ip1 - f_dyn_i) + 0.5 * (x_ip1 + x_i)
     u_c = u_i + 0.5 * (u_ip1 - u_i)
 
     f_x_c = EvaluateDynamics(planar_arm, context, x_c, u_c)
 
     x_dot_c = (1.5 / dt) * (x_ip1 - x_i) - 0.25 * (f_dyn_i + f_dyn_ip1)
-
-    # print(x_i)
-    # print(u_i)
-    # print(f_dyn_i)
 
     h_i = x_dot_c - f_x_c
 

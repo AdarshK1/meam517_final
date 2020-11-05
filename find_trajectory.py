@@ -23,14 +23,39 @@ from pydrake.solvers.snopt import SnoptSolver
 
 
 import constraints
-# import dynamics_constraints
-# importlib.reload(kinematic_constraints)
 importlib.reload(constraints)
+
 from constraints import (
     AddFinalLandingPositionConstraint,
     AddCollocationConstraints,
     EvaluateDynamics
 )
+
+import time
+from pydrake.systems.framework import DiagramBuilder
+from pydrake.systems.analysis import Simulator
+from pydrake.systems.drawing import plot_system_graphviz
+
+from pydrake.all import (
+    ConnectMeshcatVisualizer, DiagramBuilder,
+    Simulator
+)
+
+from pydrake.geometry import (
+    SceneGraph, ConnectDrakeVisualizer
+)
+
+from pydrake.common import FindResourceOrThrow
+from pydrake.multibody.plant import MultibodyPlant
+from pydrake.multibody.parsing import Parser
+from pydrake.systems.rendering import MultibodyPositionToGeometryPose
+from pydrake.systems.primitives import (
+    TrajectorySource,
+    Demultiplexer,
+    ConstantVectorSource
+)
+
+import argparse
 
 
 def find_throwing_trajectory(N, initial_state, distance, tf):
@@ -78,17 +103,13 @@ def find_throwing_trajectory(N, initial_state, distance, tf):
     x0 = x[0]
     xf = x[-1]
 
-
     # Add the kinematic constraints (initial state, final state)
     # TODO: Add constraints on the initial state
-    # print("init state", initial_state)
-    # print("flattened x[0]", x[0].flatten())
     A_init = np.identity(n_x)
     b_init = np.array(initial_state)
     prog.AddLinearEqualityConstraint(A_init, b_init, x[0].flatten())
 
     # Add the kinematic constraint on the final state
-    # print("xf", xf)
     AddFinalLandingPositionConstraint(prog, xf, distance, t_land)
 
     # Add the collocation aka dynamics constraints
@@ -103,9 +124,6 @@ def find_throwing_trajectory(N, initial_state, distance, tf):
         for j in range(n_u):
             Q[n_u * i + j] += dt * 2
             Q[n_u * (i + 1) + j] += dt * 2
-
-    print(N, initial_state, distance, tf)
-    print("Q", Q)
 
     b = np.zeros([n_u * N, 1])
     prog.AddQuadraticCost(Q, b, u.flatten())
@@ -176,7 +194,16 @@ def find_throwing_trajectory(N, initial_state, distance, tf):
 
     return x_traj, u_traj, prog, prog.GetInitialGuess(x), prog.GetInitialGuess(u)
 
+
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Swing a leg.')
+    parser.add_argument('--use_viz', action='store_true')
+
+    args = parser.parse_args()
+
+    print(args.use_viz)
+
+
     N = 7
     initial_state = np.zeros(6)
     tf = 5.0
@@ -192,33 +219,6 @@ if __name__ == '__main__':
     zmq_url = "tcp://127.0.0.1:6000"
     web_url = "http://127.0.0.1:7000/static/"
 
-
-    import matplotlib.pyplot as plt
-    import numpy as np
-    import time
-    from pydrake.systems.framework import DiagramBuilder
-    from pydrake.systems.analysis import Simulator
-    from pydrake.systems.drawing import plot_system_graphviz
-
-    from pydrake.all import (
-        ConnectMeshcatVisualizer, DiagramBuilder,
-        Simulator
-    )
-
-    from pydrake.geometry import (
-        SceneGraph, ConnectDrakeVisualizer
-    )
-
-    from pydrake.common import FindResourceOrThrow
-    from pydrake.multibody.plant import MultibodyPlant
-    from pydrake.multibody.parsing import Parser
-    from pydrake.systems.rendering import MultibodyPositionToGeometryPose
-    from pydrake.systems.primitives import (
-        TrajectorySource,
-        Demultiplexer,
-        ConstantVectorSource
-    )
-
     # Create a MultibodyPlant for the arm
     # file_name = "planar_arm.urdf"
     file_name = "leg.urdf"
@@ -228,41 +228,43 @@ if __name__ == '__main__':
     planar_arm.RegisterAsSourceForSceneGraph(scene_graph)
     Parser(plant=planar_arm).AddModelFromFile(file_name)
     planar_arm.Finalize()
+    print("finalized leg")
 
-    # Create meshcat
-    visualizer = ConnectMeshcatVisualizer(
-        builder,
-        scene_graph,
-        scene_graph.get_pose_bundle_output_port(),
-        zmq_url=zmq_url,
-        server_args=server_args)
+    if args.use_viz:
+        # Create meshcat
+        visualizer = ConnectMeshcatVisualizer(
+            builder,
+            scene_graph,
+            scene_graph.get_pose_bundle_output_port(),
+            zmq_url=zmq_url,
+            server_args=server_args)
 
-    x_traj_source = builder.AddSystem(TrajectorySource(x_traj))
-    u_traj_source = builder.AddSystem(TrajectorySource(u_traj))
+        x_traj_source = builder.AddSystem(TrajectorySource(x_traj))
+        u_traj_source = builder.AddSystem(TrajectorySource(u_traj))
 
-    demux = builder.AddSystem(Demultiplexer(np.array([3, 3])))
-    to_pose = builder.AddSystem(MultibodyPositionToGeometryPose(planar_arm))
-    zero_inputs = builder.AddSystem(ConstantVectorSource(np.zeros(3)))
+        demux = builder.AddSystem(Demultiplexer(np.array([3, 3])))
+        to_pose = builder.AddSystem(MultibodyPositionToGeometryPose(planar_arm))
+        zero_inputs = builder.AddSystem(ConstantVectorSource(np.zeros(3)))
 
-    builder.Connect(zero_inputs.get_output_port(), planar_arm.get_actuation_input_port())
-    builder.Connect(x_traj_source.get_output_port(), demux.get_input_port())
-    builder.Connect(demux.get_output_port(0), to_pose.get_input_port())
-    builder.Connect(to_pose.get_output_port(), scene_graph.get_source_pose_port(planar_arm.get_source_id()))
+        builder.Connect(zero_inputs.get_output_port(), planar_arm.get_actuation_input_port())
+        builder.Connect(x_traj_source.get_output_port(), demux.get_input_port())
+        builder.Connect(demux.get_output_port(0), to_pose.get_input_port())
+        builder.Connect(to_pose.get_output_port(), scene_graph.get_source_pose_port(planar_arm.get_source_id()))
 
-    ConnectDrakeVisualizer(builder, scene_graph);
+        ConnectDrakeVisualizer(builder, scene_graph)
 
-    diagram = builder.Build()
-    diagram.set_name("diagram")
+        diagram = builder.Build()
+        diagram.set_name("diagram")
 
-    visualizer.load()
-    print("\n!!!Open the visualizer by clicking on the URL above!!!")
+        visualizer.load()
+        print("\n!!!Open the visualizer by clicking on the URL above!!!")
 
-    # Visualize the motion for `n_playback` times
-    n_playback = 3
-    for i in range(n_playback):
-        # Set up a simulator to run this diagram.
-        simulator = Simulator(diagram)
-        simulator.Initialize()
-        simulator.set_target_realtime_rate(1)
-        simulator.AdvanceTo(tf);
-        time.sleep(2)
+        # Visualize the motion for `n_playback` times
+        n_playback = 3
+        for i in range(n_playback):
+            # Set up a simulator to run this diagram.
+            simulator = Simulator(diagram)
+            simulator.Initialize()
+            simulator.set_target_realtime_rate(1)
+            simulator.AdvanceTo(tf)
+            time.sleep(2)
