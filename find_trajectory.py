@@ -69,23 +69,28 @@ def find_throwing_trajectory(N, initial_state, distance, tf):
 
     builder = DiagramBuilder()
     plant = builder.AddSystem(MultibodyPlant(0.0))
-    file_name = "planar_arm.urdf"
+    file_name = "leg.urdf"
     Parser(plant=plant).AddModelFromFile(file_name)
     plant.Finalize()
-    planar_arm = plant.ToAutoDiffXd()
+    single_leg = plant.ToAutoDiffXd()
 
     plant_context = plant.CreateDefaultContext()
-    context = planar_arm.CreateDefaultContext()
+    context = single_leg.CreateDefaultContext()
 
-    # Dimensions specific to the planar_arm
-    n_x = planar_arm.num_positions() + planar_arm.num_velocities()
-    n_u = planar_arm.num_actuators()
+    # Dimensions specific to the single_leg
+    n_x = single_leg.num_positions() + single_leg.num_velocities()
+    n_u = single_leg.num_actuators()
+    print("num_positions", single_leg.num_positions())
+    print("num_velocities", single_leg.num_velocities())
+    # print(single_leg.())
+    print("n_x", n_x)
+    print("n_u", n_u)
 
     # Store the actuator limits here
     effort_limits = np.zeros(n_u)
     for act_idx in range(n_u):
         effort_limits[act_idx] = \
-            planar_arm.get_joint_actuator(JointActuatorIndex(act_idx)).effort_limit()
+            single_leg.get_joint_actuator(JointActuatorIndex(act_idx)).effort_limit()
     vel_limits = 15 * np.ones(n_x // 2)
 
     # Create the mathematical program
@@ -110,14 +115,13 @@ def find_throwing_trajectory(N, initial_state, distance, tf):
     prog.AddLinearEqualityConstraint(A_init, b_init, x[0].flatten())
 
     # Add the kinematic constraint on the final state
-    AddFinalLandingPositionConstraint(prog, xf, distance, t_land)
+    # AddFinalLandingPositionConstraint(prog, xf, distance, t_land)
 
     # Add the collocation aka dynamics constraints
-    AddCollocationConstraints(prog, planar_arm, context, N, x, u, timesteps)
+    AddCollocationConstraints(prog, single_leg, context, N, x, u, timesteps)
     print("Added collocation")
 
     # TODO: Add the cost function here
-    # Q = np.identity(n_u * N) * 2 * (timesteps[1] - timesteps[0])
     Q = np.zeros([n_u * N, n_u * N])
     dt = timesteps[1]
     for i in range(1, N - 1):
@@ -203,8 +207,7 @@ if __name__ == '__main__':
 
     print(args.use_viz)
 
-
-    N = 7
+    N = 2
     initial_state = np.zeros(6)
     tf = 5.0
     distance = 25.0
@@ -224,10 +227,10 @@ if __name__ == '__main__':
     file_name = "leg.urdf"
     builder = DiagramBuilder()
     scene_graph = builder.AddSystem(SceneGraph())
-    planar_arm = builder.AddSystem(MultibodyPlant(0.0))
-    planar_arm.RegisterAsSourceForSceneGraph(scene_graph)
-    Parser(plant=planar_arm).AddModelFromFile(file_name)
-    planar_arm.Finalize()
+    single_leg = builder.AddSystem(MultibodyPlant(0.0))
+    single_leg.RegisterAsSourceForSceneGraph(scene_graph)
+    Parser(plant=single_leg).AddModelFromFile(file_name)
+    single_leg.Finalize()
     print("finalized leg")
 
     if args.use_viz:
@@ -243,13 +246,15 @@ if __name__ == '__main__':
         u_traj_source = builder.AddSystem(TrajectorySource(u_traj))
 
         demux = builder.AddSystem(Demultiplexer(np.array([3, 3])))
-        to_pose = builder.AddSystem(MultibodyPositionToGeometryPose(planar_arm))
+        to_pose = builder.AddSystem(MultibodyPositionToGeometryPose(single_leg))
         zero_inputs = builder.AddSystem(ConstantVectorSource(np.zeros(3)))
+        
+        # print(single_leg.)
 
-        builder.Connect(zero_inputs.get_output_port(), planar_arm.get_actuation_input_port())
+        builder.Connect(zero_inputs.get_output_port(), single_leg.get_actuation_input_port())
         builder.Connect(x_traj_source.get_output_port(), demux.get_input_port())
         builder.Connect(demux.get_output_port(0), to_pose.get_input_port())
-        builder.Connect(to_pose.get_output_port(), scene_graph.get_source_pose_port(planar_arm.get_source_id()))
+        builder.Connect(to_pose.get_output_port(), scene_graph.get_source_pose_port(single_leg.get_source_id()))
 
         ConnectDrakeVisualizer(builder, scene_graph)
 

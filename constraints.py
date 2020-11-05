@@ -45,11 +45,6 @@ def AddFinalLandingPositionConstraint(prog, xf, d, t_land):
     prog.AddConstraint(t_land[0] >= 0)
     # pass
 
-import numpy as np
-
-from pydrake.solvers.mathematicalprogram import MathematicalProgram
-from pydrake.autodiffutils import AutoDiffXd
-
 
 def EvaluateDynamics(planar_arm, context, x, u):
     # Computes the dynamics xdot = f(x,u)
@@ -66,6 +61,12 @@ def EvaluateDynamics(planar_arm, context, x, u):
         M_inv = AutoDiffXd.inv(M)
     else:
         M_inv = np.linalg.inv(M)
+
+    print("M_inv", M_inv)
+    print("B", B)
+    print("u", u)
+    print("g", g)
+    print("C", C)
     v_dot = M_inv @ (B @ u + g - C)
     return np.hstack((x[-3:], v_dot))
 
