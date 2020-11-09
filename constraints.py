@@ -62,6 +62,7 @@ def EvaluateDynamics(planar_arm, context, x, u):
     else:
         M_inv = np.linalg.inv(M)
 
+    print("M", M)
     print("M_inv", M_inv)
     print("B", B)
     print("u", u)

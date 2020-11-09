@@ -1,0 +1,130 @@
+<?xml version="1.0"?>
+<robot name='vision60'>
+    <link name='body'>
+        <visual name='body_visual'>
+                <geometry>
+                    <mesh filename="mesh/Frame.obj" scale="1 1 1"/>
+                </geometry>
+            <material name="gray">
+                <color rgba="0.5 0.5 0.5 1"/>
+            </material>
+        </visual>
+        <collision>
+            <origin rpy="1.5707963268 0 0" xyz="-0.015 -0.01 0"/>
+            <geometry>
+                <box size="0.19 0.09 0.14"/>
+            </geometry>
+        </collision>
+    </link>
+    <link name="hip0">
+        <visual>
+            <origin rpy="0 0 0" xyz="0 0.0 0"/>
+            <geometry>
+                <mesh filename="mesh/Hip_Pod_Assembly.obj" scale="1 1 1"/>
+            </geometry>
+            <material name="gray"/>
+        </visual>
+        <collision>
+            <origin rpy="1.5707963268 0 0" xyz="-0.015 -0.01 0"/>
+            <geometry>
+                <box size="0.19 0.09 0.14"/>
+            </geometry>
+        </collision>
+        <inertial>
+            <mass value="3.1"/>
+            <!--		<mass value="1.975"/>-->
+            <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.015"/>
+            <!--		<inertia ixx="0.00891458"  ixy="0"  ixz="0" iyy="0.0100573" iyz="0" izz="0.01533698" />-->
+        </inertial>
+    </link>
+    <link name="upper0">
+        <visual>
+            <origin rpy="3.14159265359 0 0" xyz="0 0 0"/>
+            <geometry>
+                <mesh filename="mesh/Leg_Assembly.obj" scale=".001 .001 .001"/>
+            </geometry>
+            <material name="gray"/>
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="-0.16 0.0 0"/>
+            <geometry>
+                <box size="0.32 0.055 0.08"/>
+            </geometry>
+        </collision>
+        <inertial>
+            <mass value="2.7"/>
+            <!--		<mass value="2.525"/>-->
+            <inertia ixx="0.0003" ixy="0" ixz="0" iyy="0.004" iyz="0" izz="0.004"/>
+            <!--		<inertia ixx="0.0003125"  ixy="0" ixz="0" iyy="0.0040625" iyz="0" izz="0.0040625" />-->
+        </inertial>
+    </link>
+    <link name="lower0">
+        <visual>
+            <origin rpy="0 0 0" xyz="0 0.02 0"/>
+            <geometry>
+                <mesh filename="mesh/Lower_Leg_Assembly.obj" scale=".001 .001 .001"/>
+            </geometry>
+            <material name="gray"/>
+        </visual>
+        <collision>
+            <origin rpy="0 1.5707963268 0" xyz="0.1588 0 0"/>
+            <geometry>
+                <cylinder length="0.3176" radius="0.02"/>
+            </geometry>
+        </collision>
+        <inertial>
+            <mass value="0.65"/>
+            <!--		<mass value="0.375"/>-->
+            <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.0001"/>
+            <!--		<inertia ixx="0.00131075"  ixy="0"  ixz="0" iyy="0.00131075" iyz="0" izz="0.0001" />-->
+        </inertial>
+    </link>
+
+    <joint name="base_weld" type="fixed">
+        <parent link="world"/>
+        <child link="body"/>
+    </joint>
+    <joint name="body_hip" type="continuous">
+        <parent link="body"/>
+        <child link="hip0"/>
+        <axis xyz="1 0 0"/>
+        <origin xyz="0.308 0.0955 0"/>
+<!--        <limit effort="375" lower="-0.53" upper="0.53" velocity="8.6"/>-->
+        <dynamics damping="0.0" friction="0.0"/>
+    </joint>
+    <joint name="hip_upper" type="continuous">
+        <parent link="hip0"/>
+        <child link="upper0"/>
+        <axis xyz="0 -1 0"/>
+        <origin xyz="0 0.0875 0"/>
+        <!--  rpy="0 -0.3 0" -->
+<!--        <limit effort="87.5" lower="-6.28318530718" upper="6.28318530718" velocity="30"/>-->
+        <dynamics damping="0.0" friction="0.0"/>
+    </joint>
+    <joint name="upper_lower" type="continuous">
+        <parent link="upper0"/>
+        <child link="lower0"/>
+        <axis xyz="0 1 0"/>
+        <origin xyz="-0.32 0 0"/>
+        <!--rpy="0 0.5 0"-->
+<!--        <limit effort="87.5" lower="0" upper="3.14159265359" velocity="30"/>-->
+        <dynamics damping="0.0" friction="0.0"/>
+    </joint>
+
+    <transmission type="SimpleTransmission" name="u1">
+        <actuator name="motor_one"/>
+        <joint name="body_hip"/>
+        <mechanicalReduction>1</mechanicalReduction>
+    </transmission>
+    <transmission type="SimpleTransmission" name="u2">
+        <actuator name="motor_two"/>
+        <joint name="hip_upper"/>
+        <mechanicalReduction>1</mechanicalReduction>
+    </transmission>
+    <transmission type="SimpleTransmission" name="u3">
+        <actuator name="motor_three"/>
+        <joint name="upper_lower"/>
+        <mechanicalReduction>1</mechanicalReduction>
+    </transmission>
+
+</robot>

@@ -69,7 +69,7 @@ def find_throwing_trajectory(N, initial_state, distance, tf):
 
     builder = DiagramBuilder()
     plant = builder.AddSystem(MultibodyPlant(0.0))
-    file_name = "leg.urdf"
+    file_name = "leg_v2.urdf"
     Parser(plant=plant).AddModelFromFile(file_name)
     plant.Finalize()
     single_leg = plant.ToAutoDiffXd()
@@ -224,7 +224,7 @@ if __name__ == '__main__':
 
     # Create a MultibodyPlant for the arm
     # file_name = "planar_arm.urdf"
-    file_name = "leg.urdf"
+    file_name = "leg_v2.urdf"
     builder = DiagramBuilder()
     scene_graph = builder.AddSystem(SceneGraph())
     single_leg = builder.AddSystem(MultibodyPlant(0.0))
@@ -265,11 +265,12 @@ if __name__ == '__main__':
         print("\n!!!Open the visualizer by clicking on the URL above!!!")
 
         # Visualize the motion for `n_playback` times
-        n_playback = 3
-        for i in range(n_playback):
-            # Set up a simulator to run this diagram.
-            simulator = Simulator(diagram)
-            simulator.Initialize()
-            simulator.set_target_realtime_rate(1)
-            simulator.AdvanceTo(tf)
-            time.sleep(2)
+        n_playback = 1
+        # for i in range(n_playback):
+        # Set up a simulator to run this diagram.
+        simulator = Simulator(diagram)
+        simulator.Initialize()
+        simulator.set_target_realtime_rate(1)
+        # time.sleep(15)
+        # simulator.AdvanceTo(tf)
+        time.sleep(15)
