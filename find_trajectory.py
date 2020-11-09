@@ -21,12 +21,11 @@ from pydrake.multibody.parsing import Parser
 from pydrake.trajectories import PiecewisePolynomial
 from pydrake.solvers.snopt import SnoptSolver
 
-
 import constraints
+
 importlib.reload(constraints)
 
 from constraints import (
-    AddFinalLandingPositionConstraint,
     AddCollocationConstraints,
     EvaluateDynamics
 )
@@ -58,7 +57,7 @@ from pydrake.systems.primitives import (
 import argparse
 
 
-def find_throwing_trajectory(N, initial_state, distance, tf):
+def find_step_trajectory(N, initial_state, final_state, apex_state, tf):
     '''
     Parameters:
       N - number of knot points
@@ -80,11 +79,6 @@ def find_throwing_trajectory(N, initial_state, distance, tf):
     # Dimensions specific to the single_leg
     n_x = single_leg.num_positions() + single_leg.num_velocities()
     n_u = single_leg.num_actuators()
-    print("num_positions", single_leg.num_positions())
-    print("num_velocities", single_leg.num_velocities())
-    # print(single_leg.())
-    print("n_x", n_x)
-    print("n_u", n_u)
 
     # Store the actuator limits here
     effort_limits = np.zeros(n_u)
@@ -101,21 +95,25 @@ def find_throwing_trajectory(N, initial_state, distance, tf):
         x[i] = prog.NewContinuousVariables(n_x, "x_" + str(i))
         u[i] = prog.NewContinuousVariables(n_u, "u_" + str(i))
 
-    t_land = prog.NewContinuousVariables(1, "t_land")
-
     t0 = 0.0
     timesteps = np.linspace(t0, tf, N)
-    x0 = x[0]
-    xf = x[-1]
 
     # Add the kinematic constraints (initial state, final state)
-    # TODO: Add constraints on the initial state
+
+    # Add constraints on the initial state
     A_init = np.identity(n_x)
     b_init = np.array(initial_state)
     prog.AddLinearEqualityConstraint(A_init, b_init, x[0].flatten())
 
-    # Add the kinematic constraint on the final state
-    # AddFinalLandingPositionConstraint(prog, xf, distance, t_land)
+    # Add constraints on the final state
+    A_end = np.identity(n_x)
+    b_end = np.array(final_state)
+    prog.AddLinearEqualityConstraint(A_end, b_end, x[-1].flatten())
+
+    if N > 2:
+        A_apex = np.identity(n_x)
+        b_apex = np.array(apex_state)
+        prog.AddLinearEqualityConstraint(A_apex, b_apex, x[N // 2].flatten())
 
     # Add the collocation aka dynamics constraints
     AddCollocationConstraints(prog, single_leg, context, N, x, u, timesteps)
@@ -147,7 +145,7 @@ def find_throwing_trajectory(N, initial_state, distance, tf):
     ub = np.zeros([N * n_x])
 
     for i in range(N):
-        ub[i * n_x] = 3.14
+        ub[i * n_x] = 1.0
         ub[i * n_x + 1] = 3.14
         ub[i * n_x + 2] = 3.14
 
@@ -161,15 +159,9 @@ def find_throwing_trajectory(N, initial_state, distance, tf):
 
     # TODO: give the solver an initial guess for x and u using prog.SetInitialGuess(var, value)
     for i in range(N):
-
         u_init = np.random.rand(n_u) * effort_limits * 2 - effort_limits
+        x_init = initial_state + (i / N) * (final_state - initial_state)
 
-        x0_interp = np.array([0, 0, 0, 0, 0, 0])
-        xf_interp = np.array([np.pi, 0, 0, 0, 0, 0])
-        x_init = x0_interp + (i / N) * (xf_interp - x0_interp)
-
-        # print("u_init", u_init)
-        # print("x_init", x_init)
         prog.SetInitialGuess(u[i], u_init)
         prog.SetInitialGuess(x[i], x_init)
 
@@ -182,7 +174,8 @@ def find_throwing_trajectory(N, initial_state, distance, tf):
 
     x_sol = result.GetSolution(x)
     u_sol = result.GetSolution(u)
-    t_land_sol = result.GetSolution(t_land)
+
+    print(x_sol)
 
     print(result.get_solution_result())
 
@@ -193,8 +186,6 @@ def find_throwing_trajectory(N, initial_state, distance, tf):
 
     x_traj = PiecewisePolynomial.CubicHermite(timesteps, x_sol.T, xdot_sol.T)
     u_traj = PiecewisePolynomial.FirstOrderHold(timesteps, u_sol.T)
-
-    # print(x_traj, u_traj, prog, prog.GetInitialGuess(x), prog.GetInitialGuess(u))
 
     return x_traj, u_traj, prog, prog.GetInitialGuess(x), prog.GetInitialGuess(u)
 
@@ -207,11 +198,23 @@ if __name__ == '__main__':
 
     print(args.use_viz)
 
-    N = 2
-    initial_state = np.zeros(6)
+    N = 3
+    # nominal stance
+    # initial_state = np.array([0, -2.0, 2.0, 0, 0, 0])
+
+    # end of stance
+    initial_state = np.array([0, -2.75, 2.0, 0, 0, 0])
+
+    # apex
+    apex_state = np.array([0, -2.75, 1.0, 0, 0, 0])
+
+
+    # end of step
+    # initial_state = np.array([0, -2.0, 1.5, 0, 0, 0])
+    final_state = np.array([0, -2.0, 1.5, 0, 0, 0])
+    # final_state = initial_state
     tf = 5.0
-    distance = 25.0
-    x_traj, u_traj, prog, x_guess, u_guess = find_throwing_trajectory(N, initial_state, distance, tf)
+    x_traj, u_traj, prog, x_guess, u_guess = find_step_trajectory(N, initial_state, final_state, apex_state, tf)
 
     # %matplotlib notebook
     server_args = ['--ngrok_http_tunnel']
@@ -248,7 +251,7 @@ if __name__ == '__main__':
         demux = builder.AddSystem(Demultiplexer(np.array([3, 3])))
         to_pose = builder.AddSystem(MultibodyPositionToGeometryPose(single_leg))
         zero_inputs = builder.AddSystem(ConstantVectorSource(np.zeros(3)))
-        
+
         # print(single_leg.)
 
         builder.Connect(zero_inputs.get_output_port(), single_leg.get_actuation_input_port())
@@ -261,18 +264,17 @@ if __name__ == '__main__':
 
         diagram = builder.Build()
         diagram.set_name("diagram")
-        print(diagram)
 
         visualizer.load()
         print("\n!!!Open the visualizer by clicking on the URL above!!!")
 
         # Visualize the motion for `n_playback` times
-        n_playback = 1
-        # for i in range(n_playback):
-        # Set up a simulator to run this diagram.
-        simulator = Simulator(diagram)
-        simulator.Initialize()
-        simulator.set_target_realtime_rate(1)
-        # time.sleep(15)
-        simulator.AdvanceTo(tf)
-        time.sleep(15)
+        n_playback = 3
+        for i in range(n_playback):
+            # Set up a simulator to run this diagram.
+            simulator = Simulator(diagram)
+            simulator.Initialize()
+            simulator.set_target_realtime_rate(1)
+            # time.sleep(15)
+            simulator.AdvanceTo(tf)
+            time.sleep(5)
