@@ -3,7 +3,7 @@
     <link name='body'>
         <visual name='body_visual'>
                 <geometry>
-                    <mesh filename="mesh/Frame.obj" scale="1 1 1"/>
+                    <mesh filename="mesh/v4_frame.obj" scale="1 1 1"/>
                 </geometry>
             <material name="gray">
                 <color rgba="0.5 0.5 0.5 1"/>
@@ -20,7 +20,7 @@
         <visual>
             <origin rpy="0 0 0" xyz="0 0.0 0"/>
             <geometry>
-                <mesh filename="mesh/Hip_Pod_Assembly.obj" scale="1 1 1"/>
+                <mesh filename="mesh/v4_hip.obj" scale="1 1 1"/>
             </geometry>
             <material name="gray"/>
         </visual>
@@ -41,7 +41,7 @@
         <visual>
             <origin rpy="3.14159265359 0 0" xyz="0 0 0"/>
             <geometry>
-                <mesh filename="mesh/Leg_Assembly.obj" scale=".001 .001 .001"/>
+                <mesh filename="mesh/v4_upper.obj" scale="1 1 1 "/>
             </geometry>
             <material name="gray"/>
         </visual>
@@ -62,7 +62,7 @@
         <visual>
             <origin rpy="0 0 0" xyz="0 0.02 0"/>
             <geometry>
-                <mesh filename="mesh/Lower_Leg_Assembly.obj" scale=".001 .001 .001"/>
+                <mesh filename="mesh/v4_lower.obj" scale="1 1 1"/>
             </geometry>
             <material name="gray"/>
         </visual>
@@ -96,7 +96,7 @@
         <parent link="hip0"/>
         <child link="upper0"/>
         <axis xyz="0 -1 0"/>
-        <origin xyz="0 0.0875 0"/>
+        <origin xyz="0 0.12 0" rpy="0 3.14 0"/>
         <!--  rpy="0 -0.3 0" -->
 <!--        <limit effort="87.5" lower="-6.28318530718" upper="6.28318530718" velocity="30"/>-->
         <dynamics damping="0.0" friction="0.0"/>

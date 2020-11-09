@@ -260,6 +260,7 @@ if __name__ == '__main__':
 
         diagram = builder.Build()
         diagram.set_name("diagram")
+        print(diagram)
 
         visualizer.load()
         print("\n!!!Open the visualizer by clicking on the URL above!!!")
@@ -272,5 +273,5 @@ if __name__ == '__main__':
         simulator.Initialize()
         simulator.set_target_realtime_rate(1)
         # time.sleep(15)
-        # simulator.AdvanceTo(tf)
+        simulator.AdvanceTo(tf)
         time.sleep(15)
