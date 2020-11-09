@@ -255,6 +255,7 @@ if __name__ == '__main__':
         builder.Connect(x_traj_source.get_output_port(), demux.get_input_port())
         builder.Connect(demux.get_output_port(0), to_pose.get_input_port())
         builder.Connect(to_pose.get_output_port(), scene_graph.get_source_pose_port(single_leg.get_source_id()))
+        builder.Connect(scene_graph.get_query_output_port(), single_leg.get_geometry_query_input_port())
 
         ConnectDrakeVisualizer(builder, scene_graph)
 
