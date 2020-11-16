@@ -63,7 +63,6 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf):
       N - number of knot points
       initial_state - starting configuration
       distance - target distance to throw the ball
-
     '''
 
     builder = DiagramBuilder()
@@ -117,19 +116,21 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf):
 
     # Add the collocation aka dynamics constraints
     AddCollocationConstraints(prog, single_leg, context, N, x, u, timesteps)
-    print("Added collocation")
+    # print("Added collocation")
 
     # TODO: Add the cost function here
-    Q = np.zeros([n_u * N, n_u * N])
-    dt = timesteps[1]
-    for i in range(1, N - 1):
-        for j in range(n_u):
-            Q[n_u * i + j] += dt * 2
-            Q[n_u * (i + 1) + j] += dt * 2
+    # Q = np.zeros([n_u * N, n_u * N])
+    # dt = timesteps[1]
+    # for i in range(1, N - 1):
+    #     for j in range(n_u):
+    #         Q[n_u * i + j] += dt * 2
+    #         Q[n_u * (i + 1) + j] += dt * 2
+
+    Q = np.eye(n_u * N)
 
     b = np.zeros([n_u * N, 1])
     prog.AddQuadraticCost(Q, b, u.flatten())
-    print("Added quadcost")
+    # print("Added quadcost")
 
     # TODO: Add bounding box constraints on the inputs and qdot
     ub = np.zeros([N * n_u])
@@ -140,14 +141,14 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf):
 
     lb = -ub
     prog.AddBoundingBoxConstraint(lb, ub, u.flatten())
-    print("Added effort bbox")
+    # print("Added effort bbox")
 
     ub = np.zeros([N * n_x])
 
     for i in range(N):
         ub[i * n_x] = 1.0
         ub[i * n_x + 1] = 3.14
-        ub[i * n_x + 2] = 3.14
+        ub[i * n_x + 2] = 1.57
 
         ub[i * n_x + 3] = vel_limits[0]
         ub[i * n_x + 4] = vel_limits[1]
@@ -155,29 +156,36 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf):
 
     lb = -ub
     prog.AddBoundingBoxConstraint(lb, ub, x.flatten())
-    print("Added vel bbox")
+    # print("Added vel bbox")
 
     # TODO: give the solver an initial guess for x and u using prog.SetInitialGuess(var, value)
     for i in range(N):
         u_init = np.random.rand(n_u) * effort_limits * 2 - effort_limits
-        x_init = initial_state + (i / N) * (final_state - initial_state)
-
         prog.SetInitialGuess(u[i], u_init)
-        prog.SetInitialGuess(x[i], x_init)
 
-    print("initial guesses")
+        if N < 3:
+            x_init = initial_state + (i / N) * (final_state - initial_state)
+            prog.SetInitialGuess(x[i], x_init)
+        elif N > 3 and i < N / 2:
+            x_init = initial_state + (i / N) * (apex_state - initial_state)
+            prog.SetInitialGuess(x[i], x_init)
+        else:
+            x_init = apex_state + (i / N) * (final_state - apex_state)
+            prog.SetInitialGuess(x[i], x_init)
+
+    # print("initial guesses")
 
     # Set up solver
     solver = SnoptSolver()
     result = solver.Solve(prog)
-    print("solved")
+    # print("solved")
 
     x_sol = result.GetSolution(x)
     u_sol = result.GetSolution(u)
 
-    print(x_sol)
-
+    print("-" * 25)
     print(result.get_solution_result())
+    print("-" * 25)
 
     # Reconstruct the trajecotry as a cubic hermite spline
     xdot_sol = np.zeros(x_sol.shape)
@@ -196,9 +204,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    print(args.use_viz)
-
-    N = 3
+    N = 10
     # nominal stance
     # initial_state = np.array([0, -2.0, 2.0, 0, 0, 0])
 
@@ -207,7 +213,6 @@ if __name__ == '__main__':
 
     # apex
     apex_state = np.array([0, -2.75, 1.0, 0, 0, 0])
-
 
     # end of step
     # initial_state = np.array([0, -2.0, 1.5, 0, 0, 0])
