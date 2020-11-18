@@ -55,9 +55,10 @@ from pydrake.systems.primitives import (
 )
 
 import argparse
+from helper import get_plant, get_limits
 
 
-def find_step_trajectory(N, initial_state, final_state, apex_state, tf):
+def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacles=None):
     '''
     Parameters:
       N - number of knot points
@@ -65,26 +66,14 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf):
       distance - target distance to throw the ball
     '''
 
-    builder = DiagramBuilder()
-    plant = builder.AddSystem(MultibodyPlant(0.0))
-    file_name = "leg_v2.urdf"
-    Parser(plant=plant).AddModelFromFile(file_name)
-    plant.Finalize()
-    single_leg = plant.ToAutoDiffXd()
-
-    plant_context = plant.CreateDefaultContext()
-    context = single_leg.CreateDefaultContext()
+    context, single_leg, plant, plant_context = get_plant()
 
     # Dimensions specific to the single_leg
     n_x = single_leg.num_positions() + single_leg.num_velocities()
     n_u = single_leg.num_actuators()
 
     # Store the actuator limits here
-    effort_limits = np.zeros(n_u)
-    for act_idx in range(n_u):
-        effort_limits[act_idx] = \
-            single_leg.get_joint_actuator(JointActuatorIndex(act_idx)).effort_limit()
-    vel_limits = 15 * np.ones(n_x // 2)
+    effort_limits, vel_limits = get_limits(n_u, n_x, single_leg)
 
     # Create the mathematical program
     prog = MathematicalProgram()
@@ -116,23 +105,21 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf):
 
     # Add the collocation aka dynamics constraints
     AddCollocationConstraints(prog, single_leg, context, N, x, u, timesteps)
-    # print("Added collocation")
 
-    # TODO: Add the cost function here
-    # Q = np.zeros([n_u * N, n_u * N])
-    # dt = timesteps[1]
-    # for i in range(1, N - 1):
-    #     for j in range(n_u):
-    #         Q[n_u * i + j] += dt * 2
-    #         Q[n_u * (i + 1) + j] += dt * 2
+    Q = np.eye(n_u * N)
 
-    Q = 10 * np.eye(n_u * N)
+    # multiplying the cost on abduction doesn't actually solve the crazy abdction problem, it makes it worse because
+    # it now refuses to fight gravity!
+    for i in range(N):
+        Q[n_u * i] *= 0
 
     b = np.zeros([n_u * N, 1])
-    prog.AddQuadraticCost(Q, b, u.flatten())
+    # getting rid of cost on control for now, this is making it not fight gravity!
+    # prog.AddQuadraticCost(Q, b, u.flatten())
     # print("Added quadcost")
 
     # TODO: Add bounding box constraints on the inputs and qdot
+
     ub = np.zeros([N * n_u])
     for i in range(N):
         ub[i * n_u] = effort_limits[0]
@@ -149,7 +136,7 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf):
     for i in range(N):
         ub[i * n_x] = 0.785
         lb[i * n_x] = -0.785
-        ub[i * n_x + 1] = 3.14
+        ub[i * n_x + 1] = 0
         lb[i * n_x + 1] = -3.14
 
         ub[i * n_x + 2] = 3.14
@@ -164,25 +151,37 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf):
         ub[i * n_x + 5] = vel_limits[2]
         lb[i * n_x + 5] = -vel_limits[2]
 
-    # lb = -ub
     prog.AddBoundingBoxConstraint(lb, ub, x.flatten())
-    # print("Added vel bbox")
 
-    # TODO: give the solver an initial guess for x and u using prog.SetInitialGuess(var, value)
+    print("\n", "-" * 50)
     for i in range(N):
         # u_init = np.random.rand(n_u) * effort_limits * 2 - effort_limits
-        u_init = np.zeros((n_u))
+        u_init = np.zeros(n_u)
         prog.SetInitialGuess(u[i], u_init)
 
         if N < 3:
             x_init = initial_state + (i / N) * (final_state - initial_state)
-            prog.SetInitialGuess(x[i], x_init)
+            prog.SetInitialGuess(x[i].flatten(), x_init)
+            prog.AddQuadraticErrorCost(np.eye(n_x), x_init, x[i].flatten())
+
         elif N > 3 and i < N / 2:
             x_init = initial_state + (i / N) * (apex_state - initial_state)
-            prog.SetInitialGuess(x[i], x_init)
+            print(i, x[i].flatten(), x_init)
+            prog.SetInitialGuess(x[i].flatten(), x_init)
+            prog.AddQuadraticErrorCost(np.eye(n_x), x_init, x[i].flatten())
+
         else:
             x_init = apex_state + (i / N) * (final_state - apex_state)
-            prog.SetInitialGuess(x[i], x_init)
+            print(i, x[i].flatten(), x_init)
+            prog.SetInitialGuess(x[i].flatten(), x_init)
+            prog.AddQuadraticErrorCost(np.eye(n_x), x_init, x[i].flatten())
+
+    print("\n", "-" * 50)
+    print("Costs")
+    print("generic_costs", prog.generic_costs())
+    print("linear_costs", prog.linear_costs())
+    print("quadratic_costs", prog.quadratic_costs())
+    print("-" * 50, "\n")
 
     # print("initial guesses")
 
@@ -212,10 +211,11 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Swing a leg.')
     parser.add_argument('--use_viz', action='store_true')
+    parser.add_argument('--obstacles', action='store_true')
 
     args = parser.parse_args()
 
-    N = 20
+    N = 5
     # nominal stance
     # initial_state = np.array([0, -2.0, 2.0, 0, 0, 0])
 
@@ -228,21 +228,12 @@ if __name__ == '__main__':
     # end of step
     # initial_state = np.array([0, -2.0, 1.5, 0, 0, 0])
     final_state = np.array([0, -2.0, 1.5, 0, 0, 0])
+
     # final_state = initial_state
     tf = 5.0
-    x_traj, u_traj, prog, x_guess, u_guess = find_step_trajectory(N, initial_state, final_state, apex_state, tf)
-
-    # %matplotlib notebook
-    server_args = ['--ngrok_http_tunnel']
-
-    # Start a single meshcat server instance to use for the remainder of this notebook.
-    # from meshcat.servers.zmqserver import start_zmq_server_as_subprocess
-    # proc, zmq_url, web_url = start_zmq_server_as_subprocess(server_args=server_args)
-    zmq_url = "tcp://127.0.0.1:6000"
-    web_url = "http://127.0.0.1:7000/static/"
+    x_traj, u_traj, prog, x_guess, u_guess = find_step_trajectory(N, initial_state, final_state, apex_state, tf, None)
 
     # Create a MultibodyPlant for the arm
-    # file_name = "planar_arm.urdf"
     file_name = "leg_v2.urdf"
     builder = DiagramBuilder()
     scene_graph = builder.AddSystem(SceneGraph())
@@ -250,9 +241,13 @@ if __name__ == '__main__':
     single_leg.RegisterAsSourceForSceneGraph(scene_graph)
     Parser(plant=single_leg).AddModelFromFile(file_name)
     single_leg.Finalize()
-    print("finalized leg")
+    # print("finalized leg")
 
     if args.use_viz:
+        server_args = ['--ngrok_http_tunnel']
+
+        zmq_url = "tcp://127.0.0.1:6000"
+        web_url = "http://127.0.0.1:7000/static/"
         # Create meshcat
         visualizer = ConnectMeshcatVisualizer(
             builder,
@@ -268,7 +263,6 @@ if __name__ == '__main__':
         to_pose = builder.AddSystem(MultibodyPositionToGeometryPose(single_leg))
         zero_inputs = builder.AddSystem(ConstantVectorSource(np.zeros(3)))
 
-        # print(single_leg.)
 
         builder.Connect(zero_inputs.get_output_port(), single_leg.get_actuation_input_port())
         builder.Connect(x_traj_source.get_output_port(), demux.get_input_port())
@@ -285,12 +279,12 @@ if __name__ == '__main__':
         print("\n!!!Open the visualizer by clicking on the URL above!!!")
 
         # Visualize the motion for `n_playback` times
-        n_playback = 1
+        n_playback = 2
         for i in range(n_playback):
             # Set up a simulator to run this diagram.
             simulator = Simulator(diagram)
             simulator.Initialize()
             time.sleep(1)
-            simulator.set_target_realtime_rate(1)
+            simulator.set_target_realtime_rate(0.5)
             simulator.AdvanceTo(tf)
             time.sleep(2)
