@@ -126,7 +126,7 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf):
     #         Q[n_u * i + j] += dt * 2
     #         Q[n_u * (i + 1) + j] += dt * 2
 
-    Q = np.eye(n_u * N)
+    Q = 10 * np.eye(n_u * N)
 
     b = np.zeros([n_u * N, 1])
     prog.AddQuadraticCost(Q, b, u.flatten())
@@ -144,23 +144,34 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf):
     # print("Added effort bbox")
 
     ub = np.zeros([N * n_x])
+    lb = np.zeros([N * n_x])
 
     for i in range(N):
-        ub[i * n_x] = 1.0
+        ub[i * n_x] = 0.785
+        lb[i * n_x] = -0.785
         ub[i * n_x + 1] = 3.14
-        ub[i * n_x + 2] = 1.57
+        lb[i * n_x + 1] = -3.14
+
+        ub[i * n_x + 2] = 3.14
+        lb[i * n_x + 2] = 0.25
 
         ub[i * n_x + 3] = vel_limits[0]
-        ub[i * n_x + 4] = vel_limits[1]
-        ub[i * n_x + 5] = vel_limits[2]
+        lb[i * n_x + 3] = -vel_limits[0]
 
-    lb = -ub
+        ub[i * n_x + 4] = vel_limits[1]
+        lb[i * n_x + 4] = -vel_limits[1]
+
+        ub[i * n_x + 5] = vel_limits[2]
+        lb[i * n_x + 5] = -vel_limits[2]
+
+    # lb = -ub
     prog.AddBoundingBoxConstraint(lb, ub, x.flatten())
     # print("Added vel bbox")
 
     # TODO: give the solver an initial guess for x and u using prog.SetInitialGuess(var, value)
     for i in range(N):
-        u_init = np.random.rand(n_u) * effort_limits * 2 - effort_limits
+        # u_init = np.random.rand(n_u) * effort_limits * 2 - effort_limits
+        u_init = np.zeros((n_u))
         prog.SetInitialGuess(u[i], u_init)
 
         if N < 3:
@@ -204,12 +215,12 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    N = 10
+    N = 20
     # nominal stance
     # initial_state = np.array([0, -2.0, 2.0, 0, 0, 0])
 
     # end of stance
-    initial_state = np.array([0, -2.75, 2.0, 0, 0, 0])
+    initial_state = np.array([0, -2.0, 2.0, 0, 0, 0])
 
     # apex
     apex_state = np.array([0, -2.75, 1.0, 0, 0, 0])
@@ -274,12 +285,12 @@ if __name__ == '__main__':
         print("\n!!!Open the visualizer by clicking on the URL above!!!")
 
         # Visualize the motion for `n_playback` times
-        n_playback = 3
+        n_playback = 1
         for i in range(n_playback):
             # Set up a simulator to run this diagram.
             simulator = Simulator(diagram)
             simulator.Initialize()
+            time.sleep(1)
             simulator.set_target_realtime_rate(1)
-            # time.sleep(15)
             simulator.AdvanceTo(tf)
-            time.sleep(5)
+            time.sleep(2)
