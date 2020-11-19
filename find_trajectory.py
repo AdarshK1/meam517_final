@@ -63,7 +63,6 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
     Parameters:
       N - number of knot points
       initial_state - starting configuration
-      distance - target distance to throw the ball
     '''
 
     context, single_leg, plant, plant_context = get_plant()
