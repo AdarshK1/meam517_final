@@ -37,7 +37,7 @@ from pydrake.systems.drawing import plot_system_graphviz
 
 from pydrake.all import (
     ConnectMeshcatVisualizer, DiagramBuilder,
-    Simulator
+    Simulator, SimulatorStatus
 )
 
 from pydrake.geometry import (
@@ -110,8 +110,8 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
 
     # multiplying the cost on abduction doesn't actually solve the crazy abduction problem, it makes it worse because
     # it now refuses to fight gravity!
-    for i in range(N):
-        Q[n_u * i] *= 0
+    # for i in range(N):
+    #     Q[n_u * i] *= 0
 
     b = np.zeros([n_u * N, 1])
     # getting rid of cost on control for now, this is making it not fight gravity!
@@ -220,17 +220,18 @@ if __name__ == '__main__':
     # initial_state = np.array([0, -2.0, 2.0, 0, 0, 0])
 
     # end of stance
-    initial_state = np.array([0, -2.0, 2.0, 0, 0, 0])
+    initial_state = np.array([0, -2.5, 2.0, 0, 0, 0])
 
     # apex
     apex_state = np.array([0, -2.75, 1.0, 0, 0, 0])
 
     # end of step
     # initial_state = np.array([0, -2.0, 1.5, 0, 0, 0])
-    final_state = np.array([0, -2.0, 1.5, 0, 0, 0])
+    final_state = np.array([0, -1.5, 2.5, 0, 0, 0])
 
     # final_state = initial_state
-    tf = 5.0
+    # initial_state = final_state
+    tf = 2.0
     x_traj, u_traj, prog, x_guess, u_guess = find_step_trajectory(N, initial_state, final_state, apex_state, tf, None)
 
     # Create a MultibodyPlant for the arm
@@ -254,7 +255,8 @@ if __name__ == '__main__':
             scene_graph,
             scene_graph.get_pose_bundle_output_port(),
             zmq_url=zmq_url,
-            server_args=server_args)
+            server_args=server_args,
+            delete_prefix_on_load=False)
 
         x_traj_source = builder.AddSystem(TrajectorySource(x_traj))
         u_traj_source = builder.AddSystem(TrajectorySource(u_traj))
@@ -274,18 +276,21 @@ if __name__ == '__main__':
         diagram = builder.Build()
         diagram.set_name("diagram")
 
-        visualizer.load()
+        # visualizer.load()
         print("\n!!!Open the visualizer by clicking on the URL above!!!")
 
         # Visualize the motion for `n_playback` times
-        n_playback = 2
+        n_playback = 3
+        # visualizer.delete_prefix()
         for i in range(n_playback):
+            print("Started view: ", i)
             # Set up a simulator to run this diagram.
             simulator = Simulator(diagram)
-            time.sleep(3)
-            simulator.Initialize()
-            time.sleep(3)
+            # SimulatorStatus().system()
+            # time.sleep(3)
+            initialized = simulator.Initialize()
+            # time.sleep(3)
             simulator.set_target_realtime_rate(1.0)
-            time.sleep(3)
+        #     time.sleep(10)
             simulator.AdvanceTo(tf)
-            time.sleep(3)
+            time.sleep(2)
