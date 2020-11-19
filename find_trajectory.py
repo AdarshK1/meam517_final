@@ -108,7 +108,7 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
 
     Q = np.eye(n_u * N)
 
-    # multiplying the cost on abduction doesn't actually solve the crazy abdction problem, it makes it worse because
+    # multiplying the cost on abduction doesn't actually solve the crazy abduction problem, it makes it worse because
     # it now refuses to fight gravity!
     for i in range(N):
         Q[n_u * i] *= 0
@@ -161,20 +161,20 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
 
         if N < 3:
             x_init = initial_state + (i / N) * (final_state - initial_state)
-            prog.SetInitialGuess(x[i].flatten(), x_init)
-            prog.AddQuadraticErrorCost(np.eye(n_x), x_init, x[i].flatten())
+            prog.SetInitialGuess(x[i], x_init)
+            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
 
         elif N > 3 and i < N / 2:
-            x_init = initial_state + (i / N) * (apex_state - initial_state)
+            x_init = initial_state + (i / (N / 2) ) * (apex_state - initial_state)
             print(i, x[i].flatten(), x_init)
-            prog.SetInitialGuess(x[i].flatten(), x_init)
-            prog.AddQuadraticErrorCost(np.eye(n_x), x_init, x[i].flatten())
+            prog.SetInitialGuess(x[i], x_init)
+            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
 
         else:
-            x_init = apex_state + (i / N) * (final_state - apex_state)
+            x_init = apex_state + ((i - N / 2) / (N / 2) ) * (final_state - apex_state)
             print(i, x[i].flatten(), x_init)
-            prog.SetInitialGuess(x[i].flatten(), x_init)
-            prog.AddQuadraticErrorCost(np.eye(n_x), x_init, x[i].flatten())
+            prog.SetInitialGuess(x[i], x_init)
+            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
 
     print("\n", "-" * 50)
     print("Costs")
@@ -263,7 +263,6 @@ if __name__ == '__main__':
         to_pose = builder.AddSystem(MultibodyPositionToGeometryPose(single_leg))
         zero_inputs = builder.AddSystem(ConstantVectorSource(np.zeros(3)))
 
-
         builder.Connect(zero_inputs.get_output_port(), single_leg.get_actuation_input_port())
         builder.Connect(x_traj_source.get_output_port(), demux.get_input_port())
         builder.Connect(demux.get_output_port(0), to_pose.get_input_port())
@@ -283,8 +282,10 @@ if __name__ == '__main__':
         for i in range(n_playback):
             # Set up a simulator to run this diagram.
             simulator = Simulator(diagram)
+            time.sleep(3)
             simulator.Initialize()
-            time.sleep(1)
-            simulator.set_target_realtime_rate(0.5)
+            time.sleep(3)
+            simulator.set_target_realtime_rate(1.0)
+            time.sleep(3)
             simulator.AdvanceTo(tf)
-            time.sleep(2)
+            time.sleep(3)

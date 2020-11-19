@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def gen_rand_obst_cubes(N, roi_dims=(0.5, 0.5), min_size=0.02, max_size=0.1):
     obst = []
     for i in range(N):
