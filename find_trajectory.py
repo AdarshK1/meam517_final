@@ -37,7 +37,7 @@ from pydrake.systems.drawing import plot_system_graphviz
 
 from pydrake.all import (
     ConnectMeshcatVisualizer, DiagramBuilder,
-    Simulator
+    Simulator, SimulatorStatus
 )
 
 from pydrake.geometry import (
@@ -63,7 +63,6 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
     Parameters:
       N - number of knot points
       initial_state - starting configuration
-      distance - target distance to throw the ball
     '''
 
     context, single_leg, plant, plant_context = get_plant()
@@ -108,10 +107,10 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
 
     Q = np.eye(n_u * N)
 
-    # multiplying the cost on abduction doesn't actually solve the crazy abdction problem, it makes it worse because
+    # multiplying the cost on abduction doesn't actually solve the crazy abduction problem, it makes it worse because
     # it now refuses to fight gravity!
-    for i in range(N):
-        Q[n_u * i] *= 0
+    # for i in range(N):
+    #     Q[n_u * i] *= 0
 
     b = np.zeros([n_u * N, 1])
     # getting rid of cost on control for now, this is making it not fight gravity!
@@ -161,20 +160,20 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
 
         if N < 3:
             x_init = initial_state + (i / N) * (final_state - initial_state)
-            prog.SetInitialGuess(x[i].flatten(), x_init)
-            prog.AddQuadraticErrorCost(np.eye(n_x), x_init, x[i].flatten())
+            prog.SetInitialGuess(x[i], x_init)
+            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
 
         elif N > 3 and i < N / 2:
-            x_init = initial_state + (i / N) * (apex_state - initial_state)
+            x_init = initial_state + (i / (N / 2) ) * (apex_state - initial_state)
             print(i, x[i].flatten(), x_init)
-            prog.SetInitialGuess(x[i].flatten(), x_init)
-            prog.AddQuadraticErrorCost(np.eye(n_x), x_init, x[i].flatten())
+            prog.SetInitialGuess(x[i], x_init)
+            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
 
         else:
-            x_init = apex_state + (i / N) * (final_state - apex_state)
+            x_init = apex_state + ((i - N / 2) / (N / 2) ) * (final_state - apex_state)
             print(i, x[i].flatten(), x_init)
-            prog.SetInitialGuess(x[i].flatten(), x_init)
-            prog.AddQuadraticErrorCost(np.eye(n_x), x_init, x[i].flatten())
+            prog.SetInitialGuess(x[i], x_init)
+            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
 
     print("\n", "-" * 50)
     print("Costs")
@@ -220,17 +219,18 @@ if __name__ == '__main__':
     # initial_state = np.array([0, -2.0, 2.0, 0, 0, 0])
 
     # end of stance
-    initial_state = np.array([0, -2.0, 2.0, 0, 0, 0])
+    initial_state = np.array([0, -2.5, 2.0, 0, 0, 0])
 
     # apex
     apex_state = np.array([0, -2.75, 1.0, 0, 0, 0])
 
     # end of step
     # initial_state = np.array([0, -2.0, 1.5, 0, 0, 0])
-    final_state = np.array([0, -2.0, 1.5, 0, 0, 0])
+    final_state = np.array([0, -1.5, 2.5, 0, 0, 0])
 
     # final_state = initial_state
-    tf = 5.0
+    # initial_state = final_state
+    tf = 2.0
     x_traj, u_traj, prog, x_guess, u_guess = find_step_trajectory(N, initial_state, final_state, apex_state, tf, None)
 
     # Create a MultibodyPlant for the arm
@@ -254,7 +254,8 @@ if __name__ == '__main__':
             scene_graph,
             scene_graph.get_pose_bundle_output_port(),
             zmq_url=zmq_url,
-            server_args=server_args)
+            server_args=server_args,
+            delete_prefix_on_load=False)
 
         x_traj_source = builder.AddSystem(TrajectorySource(x_traj))
         u_traj_source = builder.AddSystem(TrajectorySource(u_traj))
@@ -262,7 +263,6 @@ if __name__ == '__main__':
         demux = builder.AddSystem(Demultiplexer(np.array([3, 3])))
         to_pose = builder.AddSystem(MultibodyPositionToGeometryPose(single_leg))
         zero_inputs = builder.AddSystem(ConstantVectorSource(np.zeros(3)))
-
 
         builder.Connect(zero_inputs.get_output_port(), single_leg.get_actuation_input_port())
         builder.Connect(x_traj_source.get_output_port(), demux.get_input_port())
@@ -275,16 +275,21 @@ if __name__ == '__main__':
         diagram = builder.Build()
         diagram.set_name("diagram")
 
-        visualizer.load()
+        # visualizer.load()
         print("\n!!!Open the visualizer by clicking on the URL above!!!")
 
         # Visualize the motion for `n_playback` times
-        n_playback = 2
+        n_playback = 3
+        # visualizer.delete_prefix()
         for i in range(n_playback):
+            print("Started view: ", i)
             # Set up a simulator to run this diagram.
             simulator = Simulator(diagram)
-            simulator.Initialize()
-            time.sleep(1)
-            simulator.set_target_realtime_rate(0.5)
+            # SimulatorStatus().system()
+            # time.sleep(3)
+            initialized = simulator.Initialize()
+            # time.sleep(3)
+            simulator.set_target_realtime_rate(1.0)
+        #     time.sleep(10)
             simulator.AdvanceTo(tf)
             time.sleep(2)
