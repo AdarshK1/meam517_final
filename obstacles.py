@@ -7,12 +7,12 @@ import meshcat.transformations as tforms
 from pydrake.all import *
 
 class Obstacles:
-    def __init__(self, N=1):
-        self.xy_offset = [.25, .25]
+    def __init__(self, N=5):
+        self.xy_offset = [.25, .2]
         self.cubes = self.gen_rand_obst_cubes(N)
 
 
-    def gen_rand_obst_cubes(self, N, roi_dims=(0.25, 0.25), min_size=0.02, max_size=0.05):
+    def gen_rand_obst_cubes(self, N, roi_dims=(0.15, 0.15), min_size=0.02, max_size=0.05):
         obst = []
         for i in range(N):
             size = np.random.rand() * (max_size - min_size) + min_size
@@ -47,10 +47,10 @@ class Obstacles:
                     plant_eval = single_leg
                     context_eval = context
                 # Do forward kinematics.
-                single_leg.SetPositionsAndVelocities(context_eval, x)
+                plant_eval.SetPositionsAndVelocities(context_eval, x)
                 toe_xyz = plant_eval.CalcRelativeTransform(context_eval, self.resolve_frame(plant_eval, world_frame), self.resolve_frame(plant_eval, base_frame))
                 distance = toe_xyz.translation() - self.obs_xyz
-                # print(distance)
+                # print(distance.dot(distance))
                 return [distance.dot(distance)]
 
             def resolve_frame(self, plant, F):
@@ -61,7 +61,7 @@ class Obstacles:
         # Add constraints
         for cube in self.cubes:
             obs_xyz = [cube[0], cube[1], cube[2]/2.0]
-            radius = np.sqrt(3) * cube[2]
+            radius = np.sqrt(3) * cube[2] / 2
             for i in range(N):
                 prog.AddConstraint(
                 Obstacle_Distance(obs_xyz),
@@ -75,3 +75,5 @@ class Obstacles:
             visualizer.vis["cube-" + str(i)].set_object(geom.Box([size, size, size]),
                                     geom.MeshLambertMaterial(color=0xff22dd, reflectivity=0.8))
             visualizer.vis["cube-" + str(i)].set_transform(tforms.translation_matrix([loc_x, loc_y, size/2.0]))
+
+            i+=1
