@@ -57,6 +57,12 @@ from pydrake.systems.primitives import (
 import argparse
 from helper import get_plant, get_limits
 
+import meshcat
+import meshcat.geometry as geom
+import meshcat.transformations as tforms
+
+from obstacles import Obstacles
+
 
 def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacles=None):
     '''
@@ -85,6 +91,10 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
 
     t0 = 0.0
     timesteps = np.linspace(t0, tf, N)
+
+    # Add obstacle constraints
+    if obstacles is not None:
+        obstacles.add_constraints(prog, N, x, context, single_leg, plant, plant_context)
 
     # Add the kinematic constraints (initial state, final state)
 
@@ -161,20 +171,20 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
 
         if N < 3:
             x_init = initial_state + (i / N) * (final_state - initial_state)
-            prog.SetInitialGuess(x[i].flatten(), x_init)
-            prog.AddQuadraticErrorCost(np.eye(n_x), x_init, x[i].flatten())
+            prog.SetInitialGuess(x[i], x_init)
+            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
 
         elif N > 3 and i < N / 2:
-            x_init = initial_state + (i / N) * (apex_state - initial_state)
+            x_init = initial_state + (i / (N / 2) ) * (apex_state - initial_state)
             print(i, x[i].flatten(), x_init)
-            prog.SetInitialGuess(x[i].flatten(), x_init)
-            prog.AddQuadraticErrorCost(np.eye(n_x), x_init, x[i].flatten())
+            prog.SetInitialGuess(x[i], x_init)
+            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
 
         else:
-            x_init = apex_state + (i / N) * (final_state - apex_state)
+            x_init = apex_state + ((i - N / 2) / (N / 2) ) * (final_state - apex_state)
             print(i, x[i].flatten(), x_init)
-            prog.SetInitialGuess(x[i].flatten(), x_init)
-            prog.AddQuadraticErrorCost(np.eye(n_x), x_init, x[i].flatten())
+            prog.SetInitialGuess(x[i], x_init)
+            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
 
     print("\n", "-" * 50)
     print("Costs")
@@ -229,9 +239,14 @@ if __name__ == '__main__':
     # initial_state = np.array([0, -2.0, 1.5, 0, 0, 0])
     final_state = np.array([0, -2.0, 1.5, 0, 0, 0])
 
+    # Initialize obstacles
+    obstacles = None
+    if args.obstacles:
+        obstacles = Obstacles()
+
     # final_state = initial_state
     tf = 5.0
-    x_traj, u_traj, prog, x_guess, u_guess = find_step_trajectory(N, initial_state, final_state, apex_state, tf, None)
+    x_traj, u_traj, prog, x_guess, u_guess = find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacles)
 
     # Create a MultibodyPlant for the arm
     file_name = "leg_v2.urdf"
@@ -242,6 +257,7 @@ if __name__ == '__main__':
     Parser(plant=single_leg).AddModelFromFile(file_name)
     single_leg.Finalize()
     # print("finalized leg")
+
 
     if args.use_viz:
         server_args = ['--ngrok_http_tunnel']
@@ -275,11 +291,15 @@ if __name__ == '__main__':
         diagram = builder.Build()
         diagram.set_name("diagram")
 
+        # Visualize obstacles
+        if args.obstacles:
+            obstacles.draw(visualizer)
+
         visualizer.load()
         print("\n!!!Open the visualizer by clicking on the URL above!!!")
 
         # Visualize the motion for `n_playback` times
-        n_playback = 2
+        n_playback = 1
         for i in range(n_playback):
             # Set up a simulator to run this diagram.
             simulator = Simulator(diagram)

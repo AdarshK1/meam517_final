@@ -79,10 +79,21 @@
             <!--		<inertia ixx="0.00131075"  ixy="0"  ixz="0" iyy="0.00131075" iyz="0" izz="0.0001" />-->
         </inertial>
     </link>
+    <link name="toe0">
+      <visual>
+          <geometry>
+              <sphere radius=".05"/>
+          </geometry>
+          <material name="blue">
+              <color rgba="0.0 0.0 1.0 1"/>
+          </material>
+      </visual>
+    </link>
 
     <joint name="base_weld" type="fixed">
         <parent link="world"/>
         <child link="body"/>
+        <origin xyz="0.0 0.0 0.5"/>
     </joint>
     <joint name="body_hip" type="continuous">
         <parent link="body"/>
@@ -110,6 +121,11 @@
         <limit effort="87.5" lower="0" upper="3.14159265359" velocity="30"/>
         <dynamics damping="0.0" friction="0.0"/>
     </joint>
+    <joint name="lower_toe" type="fixed">
+        <parent link="lower0"/>
+        <child link="toe0"/>
+        <origin xyz="0.3176 0 0"/>
+  </joint>
 
     <transmission type="SimpleTransmission" name="u1">
         <actuator name="motor_one"/>
