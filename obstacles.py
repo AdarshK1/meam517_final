@@ -62,9 +62,10 @@ class Obstacles:
         for cube in self.cubes:
             obs_xyz = [cube[0], cube[1], cube[2]/2.0]
             radius = np.sqrt(3) * cube[2] / 2
+            distance_functor = Obstacle_Distance(obs_xyz)
             for i in range(N):
                 prog.AddConstraint(
-                Obstacle_Distance(obs_xyz),
+                distance_functor,
                 lb=[radius], ub=[float('inf')], vars=x[i])
 
 
