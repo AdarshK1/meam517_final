@@ -6,11 +6,11 @@ import meshcat.transformations as tforms
 
 from pydrake.all import *
 
+
 class Obstacles:
     def __init__(self, N=5):
         self.xy_offset = [.25, .2]
         self.cubes = self.gen_rand_obst_cubes(N)
-
 
     def gen_rand_obst_cubes(self, N, roi_dims=(0.15, 0.15), min_size=0.02, max_size=0.05):
         obst = []
@@ -29,6 +29,7 @@ class Obstacles:
         world_frame = single_leg.world_frame()
         # print("world_frame", world_frame)
         base_frame = single_leg.GetFrameByName("toe0")
+
         # print("base_frame", base_frame)
 
         # Functor for getting distance to obstacle
@@ -48,7 +49,8 @@ class Obstacles:
                     context_eval = context
                 # Do forward kinematics.
                 plant_eval.SetPositionsAndVelocities(context_eval, x)
-                toe_xyz = plant_eval.CalcRelativeTransform(context_eval, self.resolve_frame(plant_eval, world_frame), self.resolve_frame(plant_eval, base_frame))
+                toe_xyz = plant_eval.CalcRelativeTransform(context_eval, self.resolve_frame(plant_eval, world_frame),
+                                                           self.resolve_frame(plant_eval, base_frame))
                 distance = toe_xyz.translation() - self.obs_xyz
                 # print(distance.dot(distance))
                 return [distance.dot(distance)]
@@ -57,24 +59,22 @@ class Obstacles:
                 """Gets a frame from a plant whose scalar type may be different."""
                 return plant.GetFrameByName(F.name(), F.model_instance())
 
-
         # Add constraints
         for cube in self.cubes:
-            obs_xyz = [cube[0], cube[1], cube[2]/2.0]
+            obs_xyz = [cube[0], cube[1], cube[2] / 2.0]
             radius = np.sqrt(3) * cube[2] / 2
             distance_functor = Obstacle_Distance(obs_xyz)
             for i in range(N):
                 prog.AddConstraint(
-                distance_functor,
-                lb=[radius], ub=[float('inf')], vars=x[i])
-
+                    distance_functor,
+                    lb=[radius], ub=[float('inf')], vars=x[i])
 
     def draw(self, visualizer):
         i = 0
         for cube in self.cubes:
             loc_x, loc_y, size = cube
             visualizer.vis["cube-" + str(i)].set_object(geom.Box([size, size, size]),
-                                    geom.MeshLambertMaterial(color=0xff22dd, reflectivity=0.8))
-            visualizer.vis["cube-" + str(i)].set_transform(tforms.translation_matrix([loc_x, loc_y, size/2.0]))
+                                                        geom.MeshLambertMaterial(color=0xff22dd, reflectivity=0.8))
+            visualizer.vis["cube-" + str(i)].set_transform(tforms.translation_matrix([loc_x, loc_y, size / 2.0]))
 
-            i+=1
+            i += 1

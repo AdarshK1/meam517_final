@@ -1,5 +1,5 @@
 from import_helper import *
-
+from pydrake.autodiffutils import AutoDiffXd
 
 def cos(theta):
     return AutoDiffXd.cos(theta)

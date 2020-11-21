@@ -1,5 +1,6 @@
 from import_helper import *
 
+
 def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacles=None):
     '''
     Parameters:
@@ -105,6 +106,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Swing a leg.')
     parser.add_argument('--use_viz', action='store_true')
     parser.add_argument('--obstacles', action='store_true')
+    parser.add_argument('--n_obst', default=5)
+    parser.add_argument('--n_play', default=1)
 
     args = parser.parse_args()
 
@@ -125,73 +128,12 @@ if __name__ == '__main__':
     # Initialize obstacles
     obstacles = None
     if args.obstacles:
-        obstacles = Obstacles()
+        obstacles = Obstacles(int(args.n_obst))
 
     # final_state = initial_state
     tf = 2.0
-    x_traj, u_traj, prog, x_guess, u_guess = find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacles)
-
-    # Create a MultibodyPlant for the arm
-    file_name = "leg_v2.urdf"
-    builder = DiagramBuilder()
-    scene_graph = builder.AddSystem(SceneGraph())
-    single_leg = builder.AddSystem(MultibodyPlant(0.0))
-    single_leg.RegisterAsSourceForSceneGraph(scene_graph)
-    Parser(plant=single_leg).AddModelFromFile(file_name)
-    single_leg.Finalize()
-    # print("finalized leg")
-
+    x_traj, u_traj, prog, x_guess, u_guess = find_step_trajectory(N, initial_state, final_state, apex_state, tf,
+                                                                  obstacles)
 
     if args.use_viz:
-        server_args = ['--ngrok_http_tunnel']
-
-        zmq_url = "tcp://127.0.0.1:6000"
-        web_url = "http://127.0.0.1:7000/static/"
-        # Create meshcat
-        visualizer = ConnectMeshcatVisualizer(
-            builder,
-            scene_graph,
-            scene_graph.get_pose_bundle_output_port(),
-            zmq_url=zmq_url,
-            server_args=server_args,
-            delete_prefix_on_load=False)
-
-        x_traj_source = builder.AddSystem(TrajectorySource(x_traj))
-        u_traj_source = builder.AddSystem(TrajectorySource(u_traj))
-
-        demux = builder.AddSystem(Demultiplexer(np.array([3, 3])))
-        to_pose = builder.AddSystem(MultibodyPositionToGeometryPose(single_leg))
-        zero_inputs = builder.AddSystem(ConstantVectorSource(np.zeros(3)))
-
-        builder.Connect(zero_inputs.get_output_port(), single_leg.get_actuation_input_port())
-        builder.Connect(x_traj_source.get_output_port(), demux.get_input_port())
-        builder.Connect(demux.get_output_port(0), to_pose.get_input_port())
-        builder.Connect(to_pose.get_output_port(), scene_graph.get_source_pose_port(single_leg.get_source_id()))
-        builder.Connect(scene_graph.get_query_output_port(), single_leg.get_geometry_query_input_port())
-
-        ConnectDrakeVisualizer(builder, scene_graph)
-
-        diagram = builder.Build()
-        diagram.set_name("diagram")
-
-        # Visualize obstacles
-        if args.obstacles:
-            obstacles.draw(visualizer)
-
-        visualizer.load()
-        print("\n!!!Open the visualizer by clicking on the URL above!!!")
-
-        # Visualize the motion for `n_playback` times
-        n_playback = 1
-        for i in range(n_playback):
-            print("Started view: ", i)
-            # Set up a simulator to run this diagram.
-            simulator = Simulator(diagram)
-            # SimulatorStatus().system()
-            # time.sleep(3)
-            initialized = simulator.Initialize()
-            # time.sleep(3)
-            simulator.set_target_realtime_rate(1.0)
-        #     time.sleep(10)
-            simulator.AdvanceTo(tf)
-            time.sleep(2)
+        do_viz(x_traj, u_traj, tf, int(args.n_play), obstacles)

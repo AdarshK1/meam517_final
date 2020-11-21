@@ -55,3 +55,4 @@ import meshcat.geometry as geom
 import meshcat.transformations as tforms
 
 from obstacles import Obstacles
+from viz_helper import *
