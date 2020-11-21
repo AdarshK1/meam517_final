@@ -1,68 +1,4 @@
-import matplotlib.pyplot as plt
-import numpy as np
-import importlib
-
-from pydrake.solvers.mathematicalprogram import MathematicalProgram, Solve
-from pydrake.systems.framework import DiagramBuilder
-from pydrake.systems.analysis import Simulator
-
-from pydrake.all import (
-    DiagramBuilder, Simulator
-)
-
-from pydrake.multibody.tree import (
-    JointActuatorIndex
-)
-
-from pydrake.geometry import SceneGraph
-from pydrake.common import FindResourceOrThrow
-from pydrake.multibody.plant import MultibodyPlant
-from pydrake.multibody.parsing import Parser
-from pydrake.trajectories import PiecewisePolynomial
-from pydrake.solvers.snopt import SnoptSolver
-
-import constraints
-
-importlib.reload(constraints)
-
-from constraints import (
-    AddCollocationConstraints,
-    EvaluateDynamics
-)
-
-import time
-from pydrake.systems.framework import DiagramBuilder
-from pydrake.systems.analysis import Simulator
-from pydrake.systems.drawing import plot_system_graphviz
-
-from pydrake.all import (
-    ConnectMeshcatVisualizer, DiagramBuilder,
-    Simulator, SimulatorStatus
-)
-
-from pydrake.geometry import (
-    SceneGraph, ConnectDrakeVisualizer
-)
-
-from pydrake.common import FindResourceOrThrow
-from pydrake.multibody.plant import MultibodyPlant
-from pydrake.multibody.parsing import Parser
-from pydrake.systems.rendering import MultibodyPositionToGeometryPose
-from pydrake.systems.primitives import (
-    TrajectorySource,
-    Demultiplexer,
-    ConstantVectorSource
-)
-
-import argparse
-from helper import get_plant, get_limits
-
-import meshcat
-import meshcat.geometry as geom
-import meshcat.transformations as tforms
-
-from obstacles import Obstacles
-
+from import_helper import *
 
 def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacles=None):
     '''
@@ -127,70 +63,18 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
     # prog.AddQuadraticCost(Q, b, u.flatten())
     # print("Added quadcost")
 
-    # TODO: Add bounding box constraints on the inputs and qdot
+    AddEffortBBoxConstraints(prog, effort_limits, N, n_u, u)
 
-    ub = np.zeros([N * n_u])
-    for i in range(N):
-        ub[i * n_u] = effort_limits[0]
-        ub[i * n_u + 1] = effort_limits[1]
-        ub[i * n_u + 2] = effort_limits[2]
+    AddJointBBoxConstraints(prog, n_x, N, vel_limits, x)
 
-    lb = -ub
-    prog.AddBoundingBoxConstraint(lb, ub, u.flatten())
-    # print("Added effort bbox")
+    AddInitialGuessQuadraticError(prog, initial_state, final_state, apex_state, N, n_u, n_x, u, x)
 
-    ub = np.zeros([N * n_x])
-    lb = np.zeros([N * n_x])
-
-    for i in range(N):
-        ub[i * n_x] = 0.785
-        lb[i * n_x] = -0.785
-        ub[i * n_x + 1] = 0
-        lb[i * n_x + 1] = -3.14
-
-        ub[i * n_x + 2] = 3.14
-        lb[i * n_x + 2] = 0.25
-
-        ub[i * n_x + 3] = vel_limits[0]
-        lb[i * n_x + 3] = -vel_limits[0]
-
-        ub[i * n_x + 4] = vel_limits[1]
-        lb[i * n_x + 4] = -vel_limits[1]
-
-        ub[i * n_x + 5] = vel_limits[2]
-        lb[i * n_x + 5] = -vel_limits[2]
-
-    prog.AddBoundingBoxConstraint(lb, ub, x.flatten())
-
-    print("\n", "-" * 50)
-    for i in range(N):
-        # u_init = np.random.rand(n_u) * effort_limits * 2 - effort_limits
-        u_init = np.zeros(n_u)
-        prog.SetInitialGuess(u[i], u_init)
-
-        if N < 3:
-            x_init = initial_state + (i / N) * (final_state - initial_state)
-            prog.SetInitialGuess(x[i], x_init)
-            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
-
-        elif N > 3 and i < N / 2:
-            x_init = initial_state + (i / (N / 2) ) * (apex_state - initial_state)
-            print(i, x[i].flatten(), x_init)
-            prog.SetInitialGuess(x[i], x_init)
-            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
-
-        else:
-            x_init = apex_state + ((i - N / 2) / (N / 2) ) * (final_state - apex_state)
-            print(i, x[i].flatten(), x_init)
-            prog.SetInitialGuess(x[i], x_init)
-            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
-
-    print("\n", "-" * 50)
-    print("Costs")
-    print("generic_costs", prog.generic_costs())
-    print("linear_costs", prog.linear_costs())
-    print("quadratic_costs", prog.quadratic_costs())
-    print("-" * 50, "\n")
+    # print("\n", "-" * 50)
+    # print("Costs")
+    # print("generic_costs", prog.generic_costs())
+    # print("linear_costs", prog.linear_costs())
+    # print("quadratic_costs", prog.quadratic_costs())
+    # print("-" * 50, "\n")
 
     # print("initial guesses")
 
