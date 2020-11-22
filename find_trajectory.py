@@ -1,7 +1,7 @@
 from import_helper import *
 
 
-def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacles=None):
+def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacles=None, apex_hard_constraint=False, td_hard_constraint=False):
     '''
     Parameters:
       N - number of knot points
@@ -39,12 +39,13 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
     b_init = np.array(initial_state)
     prog.AddLinearEqualityConstraint(A_init, b_init, x[0].flatten())
 
-    # Add constraints on the final state
-    A_end = np.identity(n_x)
-    b_end = np.array(final_state)
-    prog.AddLinearEqualityConstraint(A_end, b_end, x[-1].flatten())
+    if td_hard_constraint:
+        # Add constraints on the final state
+        A_end = np.identity(n_x)
+        b_end = np.array(final_state)
+        prog.AddLinearEqualityConstraint(A_end, b_end, x[-1].flatten())
 
-    if N > 2:
+    if N > 2 and apex_hard_constraint:
         A_apex = np.identity(n_x)
         b_apex = np.array(apex_state)
         prog.AddLinearEqualityConstraint(A_apex, b_apex, x[N // 2].flatten())
@@ -106,12 +107,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Swing a leg.')
     parser.add_argument('--use_viz', action='store_true')
     parser.add_argument('--obstacles', action='store_true')
-    parser.add_argument('--n_obst', default=5)
+    parser.add_argument('--n_obst', default=1)
     parser.add_argument('--n_play', default=1)
 
     args = parser.parse_args()
 
-    N = 5
+    N = 15
     # nominal stance
     # initial_state = np.array([0, -2.0, 2.0, 0, 0, 0])
 
@@ -119,7 +120,7 @@ if __name__ == '__main__':
     initial_state = np.array([0, -2.5, 2.0, 0, 0, 0])
 
     # apex
-    apex_state = np.array([0, -2.75, 1.0, 0, 0, 0])
+    apex_state = np.array([0, -3.0, 0.5, 0, 0, 0])
 
     # end of step
     # initial_state = np.array([0, -2.0, 1.5, 0, 0, 0])
@@ -128,7 +129,7 @@ if __name__ == '__main__':
     # Initialize obstacles
     obstacles = None
     if args.obstacles:
-        obstacles = Obstacles(int(args.n_obst))
+        obstacles = Obstacles(N=int(args.n_obst), multi_constraint=True)
 
     # final_state = initial_state
     tf = 2.0

@@ -52,6 +52,7 @@ def do_viz(x_traj, u_traj, tf, n_play=1, obstacles=None):
 
     # Visualize obstacles
     if obstacles is not None:
+        visualizer.vis.delete()
         obstacles.draw(visualizer)
 
     visualizer.load()

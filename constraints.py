@@ -126,12 +126,12 @@ def AddInitialGuessQuadraticError(prog, initial_state, final_state, apex_state, 
 
         elif N > 3 and i < N / 2:
             x_init = initial_state + (i / (N / 2) ) * (apex_state - initial_state)
-            print(i, x[i].flatten(), x_init)
+            # print(i, x[i].flatten(), x_init)
             prog.SetInitialGuess(x[i], x_init)
             prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
 
         else:
             x_init = apex_state + ((i - N / 2) / (N / 2) ) * (final_state - apex_state)
-            print(i, x[i].flatten(), x_init)
+            # print(i, x[i].flatten(), x_init)
             prog.SetInitialGuess(x[i], x_init)
             prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
