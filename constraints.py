@@ -1,8 +1,5 @@
-import numpy as np
+from import_helper import *
 from pydrake.autodiffutils import AutoDiffXd
-
-from pydrake.solvers.mathematicalprogram import MathematicalProgram
-
 
 def cos(theta):
     return AutoDiffXd.cos(theta)
@@ -74,3 +71,67 @@ def AddCollocationConstraints(prog, single_leg, context, N, x, u, timesteps):
         ub = np.array([0, 0, 0, 0, 0, 0])
         vars = np.hstack((x[i], u[i], x[i + 1], u[i + 1]))
         prog.AddConstraint(CollocationConstraintHelper, lb, ub, vars)
+
+
+def AddJointBBoxConstraints(prog, n_x, N, vel_limits, x):
+    ub = np.zeros([N * n_x])
+    lb = np.zeros([N * n_x])
+
+    for i in range(N):
+        # abduction joint limit
+        ub[i * n_x] = 0.785
+        lb[i * n_x] = -0.785
+
+        # hip joint limit
+        ub[i * n_x + 1] = 0
+        lb[i * n_x + 1] = -3.14
+
+        # knee joint limit
+        ub[i * n_x + 2] = 3.14
+        lb[i * n_x + 2] = 0.25
+
+        ub[i * n_x + 3] = vel_limits[0]
+        lb[i * n_x + 3] = -vel_limits[0]
+
+        ub[i * n_x + 4] = vel_limits[1]
+        lb[i * n_x + 4] = -vel_limits[1]
+
+        ub[i * n_x + 5] = vel_limits[2]
+        lb[i * n_x + 5] = -vel_limits[2]
+
+    prog.AddBoundingBoxConstraint(lb, ub, x.flatten())
+
+
+def AddEffortBBoxConstraints(prog, effort_limits, N, n_u, u):
+    ub = np.zeros([N * n_u])
+    for i in range(N):
+        ub[i * n_u] = effort_limits[0]
+        ub[i * n_u + 1] = effort_limits[1]
+        ub[i * n_u + 2] = effort_limits[2]
+
+    lb = -ub
+    prog.AddBoundingBoxConstraint(lb, ub, u.flatten())
+
+
+def AddInitialGuessQuadraticError(prog, initial_state, final_state, apex_state, N, n_u, n_x, u, x):
+    for i in range(N):
+        # u_init = np.random.rand(n_u) * effort_limits * 2 - effort_limits
+        u_init = np.zeros(n_u)
+        prog.SetInitialGuess(u[i], u_init)
+
+        if N < 3:
+            x_init = initial_state + (i / N) * (final_state - initial_state)
+            prog.SetInitialGuess(x[i], x_init)
+            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
+
+        elif N > 3 and i < N / 2:
+            x_init = initial_state + (i / (N / 2) ) * (apex_state - initial_state)
+            # print(i, x[i].flatten(), x_init)
+            prog.SetInitialGuess(x[i], x_init)
+            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
+
+        else:
+            x_init = apex_state + ((i - N / 2) / (N / 2) ) * (final_state - apex_state)
+            # print(i, x[i].flatten(), x_init)
+            prog.SetInitialGuess(x[i], x_init)
+            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
