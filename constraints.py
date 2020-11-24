@@ -1,6 +1,8 @@
 from import_helper import *
 from pydrake.autodiffutils import AutoDiffXd
 
+from helper import get_world_position
+
 def cos(theta):
     return AutoDiffXd.cos(theta)
 
@@ -135,3 +137,9 @@ def AddInitialGuessQuadraticError(prog, initial_state, final_state, apex_state, 
             # print(i, x[i].flatten(), x_init)
             prog.SetInitialGuess(x[i], x_init)
             prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
+
+def AddAboveGroundConstraint(prog, context, single_leg, plant, plant_context, x, N):
+    for i in range(N):
+        prog.AddConstraint(
+            (lambda state: [get_world_position(context, single_leg, plant, plant_context, "toe0", state)[2]]),
+            lb=[0], ub=[float('inf')], vars=x[i])

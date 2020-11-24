@@ -34,7 +34,6 @@ def draw_trace(x_traj, visualizer, tf, num_points=1000):
     for t in np.linspace(0, tf, num_points):
         x = x_traj.value(t)
         toe_pos = get_world_position(context, single_leg, plant, plant_context, "toe0", x)
-        # print(pos)
         toe_pos_array[:, i] = toe_pos
 
         lower_pos = get_world_position(context, single_leg, plant, plant_context, "lower0", x)
@@ -48,6 +47,9 @@ def draw_trace(x_traj, visualizer, tf, num_points=1000):
     visualizer.vis['toe_traj_line'].set_object(geom.Line(geom.PointsGeometry(toe_pos_array), geom.LineBasicMaterial(color=0x0000ff, linewidth=2)))
     visualizer.vis['lower_traj_line'].set_object(geom.Line(geom.PointsGeometry(lower_pos_array), geom.LineBasicMaterial(color=0xff0000, linewidth=2)))
     visualizer.vis['upper_traj_line'].set_object(geom.Line(geom.PointsGeometry(upper_pos_array), geom.LineBasicMaterial(color=0x00ff00, linewidth=2)))
+
+    print("Initial toe position:", toe_pos_array[:, 0])
+    print("Final toe position:", toe_pos_array[:, -1])
 
 
 

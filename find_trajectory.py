@@ -53,6 +53,9 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
     # Add the collocation aka dynamics constraints
     AddCollocationConstraints(prog, single_leg, context, N, x, u, timesteps)
 
+    # Add constraint to remain above ground
+    # AddAboveGroundConstraint(prog, context, single_leg, plant, plant_context, x, N)
+
     Q = np.eye(n_u * N)
 
     # multiplying the cost on abduction doesn't actually solve the crazy abduction problem, it makes it worse because
@@ -117,14 +120,23 @@ if __name__ == '__main__':
     # initial_state = np.array([0, -2.0, 2.0, 0, 0, 0])
 
     # end of stance
-    initial_state = np.array([0, -2.5, 2.0, 0, 0, 0])
+    # initial_state = np.array([0, -2.5, 2.0, 0, 0, 0])
 
     # apex
     apex_state = np.array([0, -3.0, 0.5, 0, 0, 0])
 
     # end of step
     # initial_state = np.array([0, -2.0, 1.5, 0, 0, 0])
-    final_state = np.array([0, -1.5, 2.5, 0, 0, 0])
+    # final_state = np.array([0, -1.5, 2.5, 0, 0, 0])
+
+
+    # Large step
+    initial_state = np.array([0, -2.5, 2.5, 0, 0, 0])
+    final_state = np.array([0, -1.5, 2.2, 0, 0, 0])
+
+    # Small step
+    # initial_state = np.array([0, -2.25, 1.75, 0, 0, 0])
+    # final_state = np.array([0, -1.75, 1.95, 0, 0, 0])
 
     # Initialize obstacles
     obstacles = None
