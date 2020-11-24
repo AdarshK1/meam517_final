@@ -37,6 +37,33 @@ def get_transform(plant, context, parent_frame_name, child_frame_name):
 
     return transform.translation(), transform.rotation().ToQuaternion()
 
+def get_world_position(context, single_leg, plant, plant_context, frame_name, x):
+    world_frame = single_leg.world_frame()
+    base_frame = single_leg.GetFrameByName(frame_name)
+
+    # Choose plant and context based on dtype.
+    if x.dtype == float:
+        # print("using float")
+        plant_eval = plant
+        context_eval = plant_context
+    else:
+        # print("using auto")
+        # Assume AutoDiff.
+        plant_eval = single_leg
+        context_eval = context
+
+    plant_eval.SetPositionsAndVelocities(context_eval, x)
+
+    # Do forward kinematics.
+    frame_xyz = plant_eval.CalcRelativeTransform(context_eval, resolve_frame(plant_eval, world_frame),
+                                               resolve_frame(plant_eval, base_frame))
+
+    return frame_xyz.translation()
+
+def resolve_frame(plant, F):
+    """Gets a frame from a plant whose scalar type may be different."""
+    return plant.GetFrameByName(F.name(), F.model_instance())
+
 
 def drake_quat_to_floats(drake_quat):
     return drake_quat.w(), drake_quat.x(), drake_quat.y(), drake_quat.z()

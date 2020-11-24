@@ -24,6 +24,32 @@ def assemble_visualizer(builder, scene_graph, single_leg, x_traj_source):
 
     ConnectDrakeVisualizer(builder, scene_graph)
 
+def draw_trace(x_traj, visualizer, tf, num_points=1000):
+    context, single_leg, plant, plant_context = get_plant()
+
+    toe_pos_array = np.zeros((3,num_points))
+    lower_pos_array = np.zeros((3,num_points))
+    upper_pos_array = np.zeros((3,num_points))
+    i = 0
+    for t in np.linspace(0, tf, num_points):
+        x = x_traj.value(t)
+        toe_pos = get_world_position(context, single_leg, plant, plant_context, "toe0", x)
+        # print(pos)
+        toe_pos_array[:, i] = toe_pos
+
+        lower_pos = get_world_position(context, single_leg, plant, plant_context, "lower0", x)
+        lower_pos_array[:, i] = lower_pos
+
+        upper_pos = get_world_position(context, single_leg, plant, plant_context, "upper0", x)
+        upper_pos_array[:, i] = upper_pos
+
+        i+=1
+
+    visualizer.vis['toe_traj_line'].set_object(geom.Line(geom.PointsGeometry(toe_pos_array), geom.LineBasicMaterial(color=0x0000ff, linewidth=2)))
+    visualizer.vis['lower_traj_line'].set_object(geom.Line(geom.PointsGeometry(lower_pos_array), geom.LineBasicMaterial(color=0xff0000, linewidth=2)))
+    visualizer.vis['upper_traj_line'].set_object(geom.Line(geom.PointsGeometry(upper_pos_array), geom.LineBasicMaterial(color=0x00ff00, linewidth=2)))
+
+
 
 def do_viz(x_traj, u_traj, tf, n_play=1, obstacles=None):
     server_args = ['--ngrok_http_tunnel']
@@ -54,6 +80,9 @@ def do_viz(x_traj, u_traj, tf, n_play=1, obstacles=None):
     if obstacles is not None:
         visualizer.vis.delete()
         obstacles.draw(visualizer)
+
+    # Draw trace of computed trajectory
+    draw_trace(x_traj, visualizer, tf)
 
     visualizer.load()
     print("\n!!!Open the visualizer by clicking on the URL above!!!")

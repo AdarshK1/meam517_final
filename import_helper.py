@@ -48,7 +48,7 @@ from pydrake.systems.primitives import (
 )
 
 import argparse
-from helper import get_plant, get_limits
+from helper import *
 
 import meshcat
 import meshcat.geometry as geom
