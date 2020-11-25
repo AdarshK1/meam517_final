@@ -42,6 +42,8 @@ def draw_trace(x_traj, visualizer, tf, num_points=1000):
         upper_pos = get_world_position(context, single_leg, plant, plant_context, "upper0", x)
         upper_pos_array[:, i] = upper_pos
 
+        # print(lower_pos, toe_pos)
+
         i+=1
 
     visualizer.vis['toe_traj_line'].set_object(geom.Line(geom.PointsGeometry(toe_pos_array), geom.LineBasicMaterial(color=0x0000ff, linewidth=2)))

@@ -142,6 +142,8 @@ if __name__ == '__main__':
     # Large step
     initial_state = np.array([0, -2.5, 2.5, 0, 0, 0])
     final_state = np.array([0, -1.5, 2.2, 0, 0, 0])
+    # final_state = initial_state
+    # apex_state = initial_state
 
     # Small step
     # initial_state = np.array([0, -2.25, 1.75, 0, 0, 0])

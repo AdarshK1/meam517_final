@@ -19,7 +19,7 @@ class Obstacles:
         self.heightmap = np.zeros(np.round(self.roi_dims * self.voxels_per_meter).astype(np.int))
 
         self.cubes = self.gen_rand_obst_cubes(N, 0.02, 0.1)
-        # self.cubes = self.get_known_cubes()
+        self.cubes = self.get_known_cubes()
 
         self.heightmap = cv2.rotate(self.heightmap, cv2.ROTATE_180)
 
@@ -56,7 +56,8 @@ class Obstacles:
         cv2.waitKey(1000)
 
     def get_known_cubes(self):
-        return [(0.25, 0.1, 0.2), (0.25, 0.4, 0.2)]
+        return [(0.25, 0.1, 0.2)] #, (0.25, 0.5, 0.2)]
+        # return [(0.25, 0.75, 0.2)]
 
     def add_constraints(self, prog, N, x, context, single_leg, plant, plant_context):
         world_frame = single_leg.world_frame()
@@ -99,22 +100,30 @@ class Obstacles:
                                                             self.resolve_frame(plant_eval, self.frame))
                 if self.second_frame is None:
                     distance = link_xyz.translation() - self.obs_xyz
+                    # print("joint constraint: ", self.frame.name(), distance.dot(distance) ** 0.5)
                     return [distance.dot(distance) ** 0.5]
 
                 second_link_xyz = plant_eval.CalcRelativeTransform(context_eval,
                                                                    self.resolve_frame(plant_eval, world_frame),
                                                                    self.resolve_frame(plant_eval, self.second_frame))
+
+                # actually, this makes more sense as a dot product. project the link->obst vector onto the link vector
+                # then subtract the link->obst projection from the obst vector, and that gives you distance from link
+                # to obstacle
                 link_vect = second_link_xyz.translation() - link_xyz.translation()
-                normed_obs = self.obs_xyz - link_xyz.translation()
-                # print("link_vect", link_vect, "normed_obs", normed_obs)
-                distance = np.abs(link_vect[0] * normed_obs[0] +
-                                  link_vect[1] + normed_obs[1] +
-                                  link_vect[2] + normed_obs[2]) / np.sqrt(link_vect[0] ** 2 +
-                                                                          link_vect[1] ** 2 +
-                                                                          link_vect[2] ** 2)
-                # print("distance", distance)
+
+                link_to_obst_vect = self.obs_xyz - link_xyz.translation()
+
+                obst_dist = link_to_obst_vect - (link_to_obst_vect.dot(link_vect) / np.linalg.norm(link_vect))
+                # print("link_vect", link_vect)
+                # print("norm", np.linalg.norm(link_vect))
+                # print("normed_obs", normed_obs)
+                # print("obst_dist", obst_dist.dot(obst_dist) ** 0.5)
+                distance = obst_dist.dot(obst_dist) ** 0.5
+
+                # print("link constraint", self.frame.name(), self.second_frame.name(), distance)
+                # print()
                 return [distance]
-                # return [distance.dot(distance) ** 0.5]
 
             def resolve_frame(self, plant, F):
                 """Gets a frame from a plant whose scalar type may be different."""
@@ -128,6 +137,7 @@ class Obstacles:
                 for j, frame in enumerate(frames):
                     distance_functor = Obstacle_Distance(obs_xyz, frame, multi_constraint=self.multi_constraint)
                     # print(x[i])
+                    # print(radius)
                     prog.AddConstraint(
                         distance_functor,
                         lb=[radius + frame_radii[frame.name()]], ub=[float('inf')], vars=x[i])
