@@ -56,7 +56,7 @@ class Obstacles:
         cv2.waitKey(1000)
 
     def get_known_cubes(self):
-        return [(0.25, 0.1, 0.2)] #, (0.25, 0.5, 0.2)]
+        return [(0.25, 0.1, 0.2), (0.25, 0.4, 0.2)]
         # return [(0.25, 0.75, 0.2)]
 
     def add_constraints(self, prog, N, x, context, single_leg, plant, plant_context):
