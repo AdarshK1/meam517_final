@@ -138,8 +138,21 @@ def AddInitialGuessQuadraticError(prog, initial_state, final_state, apex_state, 
             prog.SetInitialGuess(x[i], x_init)
             prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
 
+
 def AddAboveGroundConstraint(prog, context, single_leg, plant, plant_context, x, N):
     for i in range(N):
         prog.AddConstraint(
             (lambda state: [get_world_position(context, single_leg, plant, plant_context, "toe0", state)[2]]),
             lb=[0], ub=[float('inf')], vars=x[i])
+
+
+def AddRateLimiterConstraint(prog, N, u, x, delta_x, delta_u):
+    for i in range(N - 1):
+        print(x[i])
+        print(np.abs(x[i + 1] - x[i]))
+        print(delta_x)
+        # prog.AddConstraint(np.abs(x[i + 1] - x[i]), lb=np.zeros(6), ub=delta_x, vars=x[i:i+2])
+        # prog.AddBoundingBoxConstraint(np.zeros(6), delta_x, np.abs(x[i + 1] - x[i]))
+        # prog.AddLinearInequalityConstraint()
+        prog.AddLinearConstraint(abs(x[i + 1] - x[i]) <= delta_x, vars=x[i:i+2])
+        # prog.AddConstraint(np.abs(u[i + 1] - u[i]) <= delta_u)

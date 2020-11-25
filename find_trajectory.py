@@ -68,10 +68,19 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
     # prog.AddQuadraticCost(Q, b, u.flatten())
     # print("Added quadcost")
 
+    # Add rate limiting constraint
+    # its unclear why this doesn't work..
+    delta_u = np.array([20.0, 20.0, 20.0])
+    delta_x = np.array([2.0, 2.0, 2.0, 100.0, 100.0, 100.0])
+    # AddRateLimiterConstraint(prog, N, u, x, delta_x, delta_u)
+
+    # Add constraint on effort limits
     AddEffortBBoxConstraints(prog, effort_limits, N, n_u, u)
 
+    # add constraint on joint states/vels limits
     AddJointBBoxConstraints(prog, n_x, N, vel_limits, x)
 
+    # add initial guesses and quadratic errors from nominal
     AddInitialGuessQuadraticError(prog, initial_state, final_state, apex_state, N, n_u, n_x, u, x)
 
     # print("\n", "-" * 50)
