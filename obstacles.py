@@ -4,8 +4,9 @@ import meshcat
 import meshcat.geometry as geom
 import meshcat.transformations as tforms
 import cv2
-
+from scipy.spatial.transform import Rotation as R
 from pydrake.all import *
+from helper import *
 
 
 class Obstacles:
@@ -22,7 +23,7 @@ class Obstacles:
 
         self.heightmap = cv2.rotate(self.heightmap, cv2.ROTATE_180)
 
-        self.visualize_heightmap()
+        # self.visualize_heightmap()
 
     def gen_rand_obst_cubes(self, N, min_size=0.02, max_size=0.05):
         obst = []
@@ -62,6 +63,8 @@ class Obstacles:
         base_frame = single_leg.GetFrameByName("toe0")
 
         frame_names = ["toe0", "lower0", "upper0"]
+        second_frame_names = [None, "toe0", "lower0"]
+        frame_radii = {"toe0": 0.02, "lower0": 0.02, "upper0": 0.04}
         frames = []
         for name in frame_names:
             frames.append(single_leg.GetFrameByName(name))
@@ -70,11 +73,12 @@ class Obstacles:
 
         # Functor for getting distance to obstacle
         class Obstacle_Distance:
-            def __init__(self, obs_xyz, frame, multi_constraint=False):
+            def __init__(self, obs_xyz, frame, multi_constraint=False, second_frame=None):
                 # XYZ position of obstacle center
                 self.obs_xyz = obs_xyz
                 self.multi_constraint = multi_constraint
                 self.frame = frame
+                self.second_frame = second_frame
 
             def __call__(self, x):
                 # Choose plant and context based on dtype.
@@ -91,10 +95,26 @@ class Obstacles:
                 plant_eval.SetPositionsAndVelocities(context_eval, x)
 
                 # Do forward kinematics.
-                toe_xyz = plant_eval.CalcRelativeTransform(context_eval, self.resolve_frame(plant_eval, world_frame),
-                                                           self.resolve_frame(plant_eval, self.frame))
-                distance = toe_xyz.translation() - self.obs_xyz
-                return [distance.dot(distance) ** 0.5]
+                link_xyz = plant_eval.CalcRelativeTransform(context_eval, self.resolve_frame(plant_eval, world_frame),
+                                                            self.resolve_frame(plant_eval, self.frame))
+                if self.second_frame is None:
+                    distance = link_xyz.translation() - self.obs_xyz
+                    return [distance.dot(distance) ** 0.5]
+
+                second_link_xyz = plant_eval.CalcRelativeTransform(context_eval,
+                                                                   self.resolve_frame(plant_eval, world_frame),
+                                                                   self.resolve_frame(plant_eval, self.second_frame))
+                link_vect = second_link_xyz.translation() - link_xyz.translation()
+                normed_obs = self.obs_xyz - link_xyz.translation()
+                # print("link_vect", link_vect, "normed_obs", normed_obs)
+                distance = np.abs(link_vect[0] * normed_obs[0] +
+                                  link_vect[1] + normed_obs[1] +
+                                  link_vect[2] + normed_obs[2]) / np.sqrt(link_vect[0] ** 2 +
+                                                                          link_vect[1] ** 2 +
+                                                                          link_vect[2] ** 2)
+                # print("distance", distance)
+                return [distance]
+                # return [distance.dot(distance) ** 0.5]
 
             def resolve_frame(self, plant, F):
                 """Gets a frame from a plant whose scalar type may be different."""
@@ -105,12 +125,19 @@ class Obstacles:
             obs_xyz = [cube[0], cube[1], cube[2] / 2.0]
             radius = np.sqrt(3) * cube[2] / 2
             for i in range(N):
-                for frame in frames:
+                for j, frame in enumerate(frames):
                     distance_functor = Obstacle_Distance(obs_xyz, frame, multi_constraint=self.multi_constraint)
                     # print(x[i])
                     prog.AddConstraint(
                         distance_functor,
-                        lb=[radius], ub=[float('inf')], vars=x[i])
+                        lb=[radius + frame_radii[frame.name()]], ub=[float('inf')], vars=x[i])
+
+                    if second_frame_names[j] is not None:
+                        distance_functor = Obstacle_Distance(obs_xyz, frame, multi_constraint=self.multi_constraint, second_frame=single_leg.GetFrameByName(second_frame_names[j]))
+                        prog.AddConstraint(
+                            distance_functor,
+                            lb=[radius + frame_radii[frame.name()]], ub=[float('inf')], vars=x[i])
+
 
     def draw(self, visualizer):
         for i, cube in enumerate(self.cubes):
@@ -118,4 +145,3 @@ class Obstacles:
             visualizer.vis["cube-" + str(i)].set_object(geom.Box([size, size, size]),
                                                         geom.MeshLambertMaterial(color=0xff22dd, reflectivity=0.8))
             visualizer.vis["cube-" + str(i)].set_transform(tforms.translation_matrix([loc_x, loc_y, size / 2.0]))
-
