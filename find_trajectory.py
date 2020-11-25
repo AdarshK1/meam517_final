@@ -100,9 +100,9 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
     x_sol = result.GetSolution(x)
     u_sol = result.GetSolution(u)
 
-    print("-" * 25)
+    print("-" * 50)
     print(result.get_solution_result())
-    print("-" * 25)
+    print("-" * 50)
 
     # Reconstruct the trajecotry as a cubic hermite spline
     xdot_sol = np.zeros(x_sol.shape)
@@ -124,15 +124,18 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    N = 15
+    N = 5
     # nominal stance
     # initial_state = np.array([0, -2.0, 2.0, 0, 0, 0])
 
     # end of stance
     # initial_state = np.array([0, -2.5, 2.0, 0, 0, 0])
 
-    # apex
+    # more aggressive apex
     apex_state = np.array([0, -3.0, 0.5, 0, 0, 0])
+
+    # less aggressive apex
+    # apex_state = np.array([0, -3.0, 1.5, 0, 0, 0])
 
     # end of step
     # initial_state = np.array([0, -2.0, 1.5, 0, 0, 0])

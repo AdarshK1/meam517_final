@@ -25,10 +25,11 @@ class Obstacles:
 
         # self.visualize_heightmap()
 
-    def gen_rand_obst_cubes(self, N, min_size=0.02, max_size=0.05):
+    def gen_rand_obst_cubes(self, N, min_size=0.02, max_size=0.05, min_height=0, max_height=0.1):
         obst = []
         for i in range(N):
             size = np.random.rand() * (max_size - min_size) + min_size
+            height = np.random.rand() * (max_height - min_height) + min_height
 
             loc_x = np.random.rand() * (self.roi_dims[0] - size) + size / 2
             loc_y = np.random.rand() * (self.roi_dims[1] - size) + size / 2
@@ -41,12 +42,12 @@ class Obstacles:
             for r in range(hmap_x - half_size_hmap, hmap_x + half_size_hmap):
                 for c in range(hmap_y - half_size_hmap, hmap_y + half_size_hmap):
                     if size > self.heightmap[r, c]:
-                        self.heightmap[r, c] = size
+                        self.heightmap[r, c] = height
 
             loc_x += self.xy_offset[0]
             loc_y += self.xy_offset[1]
 
-            obst.append((loc_x, loc_y, size))
+            obst.append((loc_x, loc_y, size, height))
         return obst
 
     def visualize_heightmap(self):
@@ -56,15 +57,15 @@ class Obstacles:
         cv2.waitKey(1000)
 
     def get_known_cubes(self):
-        return [(0.25, 0.1, 0.2), (0.25, 0.4, 0.2)]
-        # return [(0.25, 0.75, 0.2)]
+        # return [(0.25, 0.1, 0.2), (0.25, 0.4, 0.2)]
+        return [(0.30, 0.25, 0.15, 0.1)]
 
     def add_constraints(self, prog, N, x, context, single_leg, plant, plant_context):
         world_frame = single_leg.world_frame()
-        base_frame = single_leg.GetFrameByName("toe0")
 
         frame_names = ["toe0", "lower0", "upper0"]
         second_frame_names = [None, "toe0", "lower0"]
+        second_frame_names = [None, "toe0", None]
         frame_radii = {"toe0": 0.02, "lower0": 0.02, "upper0": 0.04}
         frames = []
         for name in frame_names:
@@ -110,19 +111,27 @@ class Obstacles:
                 # actually, this makes more sense as a dot product. project the link->obst vector onto the link vector
                 # then subtract the link->obst projection from the obst vector, and that gives you distance from link
                 # to obstacle
-                link_vect = second_link_xyz.translation() - link_xyz.translation()
 
+                # vector representing link
+                link_vect = second_link_xyz.translation() - link_xyz.translation()
+                # norm of link vector
+                link_vect_norm = np.linalg.norm(link_vect)
+                # link unit vector
+                link_unit_vect = link_vect / link_vect_norm
+
+                # vector going from link to obstacle
                 link_to_obst_vect = self.obs_xyz - link_xyz.translation()
 
-                obst_dist = link_to_obst_vect - (link_to_obst_vect.dot(link_vect) / np.linalg.norm(link_vect))
-                # print("link_vect", link_vect)
-                # print("norm", np.linalg.norm(link_vect))
-                # print("normed_obs", normed_obs)
-                # print("obst_dist", obst_dist.dot(obst_dist) ** 0.5)
-                distance = obst_dist.dot(obst_dist) ** 0.5
+                obst_dist = link_to_obst_vect - (link_unit_vect * link_to_obst_vect.dot(link_unit_vect))
+                print("link_vect", link_vect)
+                print("link_to_obst_vect", link_to_obst_vect)
+                print("link_to_obst_vect.dot(link_unit_vect)", link_to_obst_vect.dot(link_unit_vect))
+                print("projection", (link_vect * (link_unit_vect * link_to_obst_vect.dot(link_unit_vect))))
+                print("obst_dist", obst_dist)
+                distance = np.linalg.norm(obst_dist)
 
-                # print("link constraint", self.frame.name(), self.second_frame.name(), distance)
-                # print()
+                print("link constraint", self.frame.name(), self.second_frame.name(), distance)
+                print()
                 return [distance]
 
             def resolve_frame(self, plant, F):
@@ -133,6 +142,7 @@ class Obstacles:
         for cube in self.cubes:
             obs_xyz = [cube[0], cube[1], cube[2] / 2.0]
             radius = np.sqrt(3) * cube[2] / 2
+            print(radius)
             for i in range(N):
                 for j, frame in enumerate(frames):
                     distance_functor = Obstacle_Distance(obs_xyz, frame, multi_constraint=self.multi_constraint)
@@ -151,7 +161,15 @@ class Obstacles:
 
     def draw(self, visualizer):
         for i, cube in enumerate(self.cubes):
-            loc_x, loc_y, size = cube
-            visualizer.vis["cube-" + str(i)].set_object(geom.Box([size, size, size]),
-                                                        geom.MeshLambertMaterial(color=0xff22dd, reflectivity=0.8))
-            visualizer.vis["cube-" + str(i)].set_transform(tforms.translation_matrix([loc_x, loc_y, size / 2.0]))
+            loc_x, loc_y, size, height = cube
+            # visualizer.vis["cube-" + str(i)].set_object(geom.Box([size, size, size]),
+            #                                             geom.MeshLambertMaterial(color=0xff22dd, reflectivity=0.8))
+            # visualizer.vis["cube-" + str(i)].set_transform(tforms.translation_matrix([loc_x, loc_y, size / 2.0]))
+
+
+            visualizer.vis["sphere-"+ str(i)].set_object(g.Sphere(np.sqrt(3) * size / 2),
+                                     g.MeshLambertMaterial(
+                                         color=0xff22dd,
+                                         reflectivity=0.8))
+            visualizer.vis["sphere-" + str(i)].set_transform(tforms.translation_matrix([loc_x, loc_y, size / 2.0]))
+
