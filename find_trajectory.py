@@ -124,7 +124,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    N = 5
+    N = 25
     # nominal stance
     # initial_state = np.array([0, -2.0, 2.0, 0, 0, 0])
 
@@ -132,10 +132,10 @@ if __name__ == '__main__':
     # initial_state = np.array([0, -2.5, 2.0, 0, 0, 0])
 
     # more aggressive apex
-    apex_state = np.array([0, -3.0, 0.5, 0, 0, 0])
+    # apex_state = np.array([0, -3.0, 0.5, 0, 0, 0])
 
     # less aggressive apex
-    # apex_state = np.array([0, -3.0, 1.5, 0, 0, 0])
+    apex_state = np.array([0, -3.0, 1.5, 0, 0, 0])
 
     # end of step
     # initial_state = np.array([0, -2.0, 1.5, 0, 0, 0])

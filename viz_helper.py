@@ -1,4 +1,5 @@
 from import_helper import *
+from matplotlib import pyplot as plt
 
 def build_viz_plant():
     # Create a MultibodyPlant for the arm
@@ -10,6 +11,7 @@ def build_viz_plant():
     Parser(plant=single_leg).AddModelFromFile(file_name)
     single_leg.Finalize()
     return single_leg, builder, scene_graph
+
 
 def assemble_visualizer(builder, scene_graph, single_leg, x_traj_source):
     demux = builder.AddSystem(Demultiplexer(np.array([3, 3])))
@@ -24,17 +26,28 @@ def assemble_visualizer(builder, scene_graph, single_leg, x_traj_source):
 
     ConnectDrakeVisualizer(builder, scene_graph)
 
-def draw_trace(x_traj, visualizer, tf, num_points=1000):
+
+def draw_trace(x_traj, visualizer, tf, num_points=1000, plot=False):
     context, single_leg, plant, plant_context = get_plant()
 
-    toe_pos_array = np.zeros((3,num_points))
-    lower_pos_array = np.zeros((3,num_points))
-    upper_pos_array = np.zeros((3,num_points))
+    toe_pos_array = np.zeros((3, num_points))
+    lower_pos_array = np.zeros((3, num_points))
+    upper_pos_array = np.zeros((3, num_points))
     i = 0
+    toe_to_obst_x = []
+    toe_to_obst_y = []
+    toe_to_obst_z = []
+    toe_to_obst_euc = []
     for t in np.linspace(0, tf, num_points):
         x = x_traj.value(t)
         toe_pos = get_world_position(context, single_leg, plant, plant_context, "toe0", x)
         toe_pos_array[:, i] = toe_pos
+
+        toe_to_obst = toe_pos - np.array([0.25, 0.25, 0.1])
+        toe_to_obst_x.append(toe_to_obst[0])
+        toe_to_obst_y.append(toe_to_obst[1])
+        toe_to_obst_z.append(toe_to_obst[2])
+        toe_to_obst_euc.append(toe_to_obst.dot(toe_to_obst) ** 0.5)
 
         lower_pos = get_world_position(context, single_leg, plant, plant_context, "lower0", x)
         lower_pos_array[:, i] = lower_pos
@@ -44,15 +57,24 @@ def draw_trace(x_traj, visualizer, tf, num_points=1000):
 
         # print(lower_pos, toe_pos)
 
-        i+=1
+        i += 1
+    if plot:
+        plt.plot(toe_to_obst_x)
+        plt.plot(toe_to_obst_y)
+        plt.plot(toe_to_obst_z)
+        plt.plot(toe_to_obst_euc)
+        plt.legend(["x", "y", "z", "total"])
+        plt.show()
 
-    visualizer.vis['toe_traj_line'].set_object(geom.Line(geom.PointsGeometry(toe_pos_array), geom.LineBasicMaterial(color=0x0000ff, linewidth=2)))
-    visualizer.vis['lower_traj_line'].set_object(geom.Line(geom.PointsGeometry(lower_pos_array), geom.LineBasicMaterial(color=0xff0000, linewidth=2)))
-    visualizer.vis['upper_traj_line'].set_object(geom.Line(geom.PointsGeometry(upper_pos_array), geom.LineBasicMaterial(color=0x00ff00, linewidth=2)))
+    visualizer.vis['toe_traj_line'].set_object(
+        geom.Line(geom.PointsGeometry(toe_pos_array), geom.LineBasicMaterial(color=0x0000ff, linewidth=2)))
+    visualizer.vis['lower_traj_line'].set_object(
+        geom.Line(geom.PointsGeometry(lower_pos_array), geom.LineBasicMaterial(color=0xff0000, linewidth=2)))
+    visualizer.vis['upper_traj_line'].set_object(
+        geom.Line(geom.PointsGeometry(upper_pos_array), geom.LineBasicMaterial(color=0x00ff00, linewidth=2)))
 
     print("Initial toe position:", toe_pos_array[:, 0])
     print("Final toe position:", toe_pos_array[:, -1])
-
 
 
 def do_viz(x_traj, u_traj, tf, n_play=1, obstacles=None):

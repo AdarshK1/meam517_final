@@ -58,15 +58,15 @@ class Obstacles:
 
     def get_known_cubes(self):
         # return [(0.25, 0.1, 0.2), (0.25, 0.4, 0.2)]
-        return [(0.30, 0.25, 0.15, 0.1)]
+        return [(0.25, 0.25, 0.2, 0.1)]
 
     def add_constraints(self, prog, N, x, context, single_leg, plant, plant_context):
         world_frame = single_leg.world_frame()
 
         frame_names = ["toe0", "lower0", "upper0"]
         second_frame_names = [None, "toe0", "lower0"]
-        second_frame_names = [None, "toe0", None]
-        frame_radii = {"toe0": 0.02, "lower0": 0.02, "upper0": 0.04}
+        # second_frame_names = [None, "toe0", None]
+        frame_radii = {"toe0": 0.02, "lower0": 0.02, "upper0": 0.05}
         frames = []
         for name in frame_names:
             frames.append(single_leg.GetFrameByName(name))
@@ -101,7 +101,7 @@ class Obstacles:
                                                             self.resolve_frame(plant_eval, self.frame))
                 if self.second_frame is None:
                     distance = link_xyz.translation() - self.obs_xyz
-                    # print("joint constraint: ", self.frame.name(), distance.dot(distance) ** 0.5)
+                    # print("joint constraint: ", self.frame.name(), distance.dot(distance) ** 0.5, link_xyz.translation(), self.obs_xyz, distance)
                     return [distance.dot(distance) ** 0.5]
 
                 second_link_xyz = plant_eval.CalcRelativeTransform(context_eval,
@@ -113,6 +113,10 @@ class Obstacles:
                 # to obstacle
 
                 # vector representing link
+                # print("second_link_xyz", second_link_xyz.translation())
+                # print("link_xyz", link_xyz.translation())
+                # print(self.obs_xyz)
+
                 link_vect = second_link_xyz.translation() - link_xyz.translation()
                 # norm of link vector
                 link_vect_norm = np.linalg.norm(link_vect)
@@ -123,15 +127,15 @@ class Obstacles:
                 link_to_obst_vect = self.obs_xyz - link_xyz.translation()
 
                 obst_dist = link_to_obst_vect - (link_unit_vect * link_to_obst_vect.dot(link_unit_vect))
-                print("link_vect", link_vect)
-                print("link_to_obst_vect", link_to_obst_vect)
-                print("link_to_obst_vect.dot(link_unit_vect)", link_to_obst_vect.dot(link_unit_vect))
-                print("projection", (link_vect * (link_unit_vect * link_to_obst_vect.dot(link_unit_vect))))
-                print("obst_dist", obst_dist)
+                # print("link_vect", link_vect)
+                # print("link_to_obst_vect", link_to_obst_vect)
+                # print("link_to_obst_vect.dot(link_unit_vect)", link_to_obst_vect.dot(link_unit_vect))
+                # print("projection", (link_vect * (link_unit_vect * link_to_obst_vect.dot(link_unit_vect))))
+                # print("obst_dist", obst_dist)
                 distance = np.linalg.norm(obst_dist)
 
-                print("link constraint", self.frame.name(), self.second_frame.name(), distance)
-                print()
+                # print("link constraint", self.frame.name(), self.second_frame.name(), distance)
+                # print()
                 return [distance]
 
             def resolve_frame(self, plant, F):
@@ -140,8 +144,9 @@ class Obstacles:
 
         # Add constraints
         for cube in self.cubes:
-            obs_xyz = [cube[0], cube[1], cube[2] / 2.0]
             radius = np.sqrt(3) * cube[2] / 2
+            obs_xyz = [cube[0], cube[1], radius]
+
             print(radius)
             for i in range(N):
                 for j, frame in enumerate(frames):
@@ -153,11 +158,12 @@ class Obstacles:
                         lb=[radius + frame_radii[frame.name()]], ub=[float('inf')], vars=x[i])
 
                     if second_frame_names[j] is not None:
-                        distance_functor = Obstacle_Distance(obs_xyz, frame, multi_constraint=self.multi_constraint, second_frame=single_leg.GetFrameByName(second_frame_names[j]))
+                        distance_functor = Obstacle_Distance(obs_xyz, frame, multi_constraint=self.multi_constraint,
+                                                             second_frame=single_leg.GetFrameByName(
+                                                                 second_frame_names[j]))
                         prog.AddConstraint(
                             distance_functor,
                             lb=[radius + frame_radii[frame.name()]], ub=[float('inf')], vars=x[i])
-
 
     def draw(self, visualizer):
         for i, cube in enumerate(self.cubes):
@@ -166,10 +172,9 @@ class Obstacles:
             #                                             geom.MeshLambertMaterial(color=0xff22dd, reflectivity=0.8))
             # visualizer.vis["cube-" + str(i)].set_transform(tforms.translation_matrix([loc_x, loc_y, size / 2.0]))
 
-
-            visualizer.vis["sphere-"+ str(i)].set_object(g.Sphere(np.sqrt(3) * size / 2),
-                                     g.MeshLambertMaterial(
-                                         color=0xff22dd,
-                                         reflectivity=0.8))
-            visualizer.vis["sphere-" + str(i)].set_transform(tforms.translation_matrix([loc_x, loc_y, size / 2.0]))
-
+            radius = np.sqrt(3) * size / 2
+            visualizer.vis["sphere-" + str(i)].set_object(geom.Sphere(radius),
+                                                          geom.MeshLambertMaterial(
+                                                              color=0xff22dd,
+                                                              reflectivity=0.8))
+            visualizer.vis["sphere-" + str(i)].set_transform(tforms.translation_matrix([loc_x, loc_y, radius]))
