@@ -57,8 +57,8 @@ class Obstacles:
         cv2.waitKey(1000)
 
     def get_known_cubes(self):
-        # return [(0.25, 0.1, 0.2), (0.25, 0.4, 0.2)]
-        return [(0.25, 0.25, 0.2, 0.1)]
+        return [(0.25, 0.1, 0.2, 0.1), (0.25, 0.4, 0.1, 0.1)]
+        # return [(0.25, 0.25, 0.2, 0.1)]
 
     def add_constraints(self, prog, N, x, context, single_leg, plant, plant_context):
         world_frame = single_leg.world_frame()
@@ -147,7 +147,6 @@ class Obstacles:
             radius = np.sqrt(3) * cube[2] / 2
             obs_xyz = [cube[0], cube[1], radius]
 
-            print(radius)
             for i in range(N):
                 for j, frame in enumerate(frames):
                     distance_functor = Obstacle_Distance(obs_xyz, frame, multi_constraint=self.multi_constraint)

@@ -124,7 +124,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    N = 25
+    N = 35
     # nominal stance
     # initial_state = np.array([0, -2.0, 2.0, 0, 0, 0])
 
@@ -159,8 +159,13 @@ if __name__ == '__main__':
 
     # final_state = initial_state
     tf = 2.0
+
+    t1 = time.time()
     x_traj, u_traj, prog, x_guess, u_guess = find_step_trajectory(N, initial_state, final_state, apex_state, tf,
                                                                   obstacles)
-
+    t2 = time.time()
+    print("-" * 75)
+    print("Time to solve: {}; Time per N: {}".format((t2 - t1), (t2 - t1) / N))
+    print("-" * 75)
     if args.use_viz:
         do_viz(x_traj, u_traj, tf, int(args.n_play), obstacles)
