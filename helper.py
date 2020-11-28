@@ -19,6 +19,12 @@ def get_plant():
 
 
 def get_limits(n_u, n_x, plant):
+    """
+
+    :param n_x:
+    :param plant:
+    :param n_u:
+    """
     # Store the actuator limits here
     effort_limits = np.zeros(n_u)
     for act_idx in range(n_u):
@@ -30,6 +36,14 @@ def get_limits(n_u, n_x, plant):
 
 
 def get_transform(plant, context, parent_frame_name, child_frame_name):
+    """
+
+    :param plant:
+    :param context:
+    :param parent_frame_name:
+    :param child_frame_name:
+    :return:
+    """
     parent = plant.GetFrameByName(parent_frame_name)
     child = plant.GetFrameByName(child_frame_name)
 
@@ -37,7 +51,18 @@ def get_transform(plant, context, parent_frame_name, child_frame_name):
 
     return transform.translation(), transform.rotation().ToQuaternion()
 
+
 def get_world_position(context, single_leg, plant, plant_context, frame_name, x):
+    """
+
+    :param context:
+    :param single_leg:
+    :param plant:
+    :param plant_context:
+    :param frame_name:
+    :param x:
+    :return:
+    """
     world_frame = single_leg.world_frame()
     base_frame = single_leg.GetFrameByName(frame_name)
 
@@ -60,12 +85,18 @@ def get_world_position(context, single_leg, plant, plant_context, frame_name, x)
 
     return frame_xyz.translation()
 
+
 def resolve_frame(plant, F):
     """Gets a frame from a plant whose scalar type may be different."""
     return plant.GetFrameByName(F.name(), F.model_instance())
 
 
 def drake_quat_to_floats(drake_quat):
+    """
+
+    :param drake_quat:
+    :return:
+    """
     return drake_quat.w(), drake_quat.x(), drake_quat.y(), drake_quat.z()
 
 
@@ -74,6 +105,14 @@ def get_angle_from_context(plant, context, joint_name):
 
 
 def set_angle_in_context(plant, context, joint_name, angle):
+    """
+
+    :param plant:
+    :param context:
+    :param joint_name:
+    :param angle:
+    :return:
+    """
     joint = plant.GetJointByName(joint_name)
     joint.set_angle(context, angle)
 
@@ -81,6 +120,12 @@ def set_angle_in_context(plant, context, joint_name, angle):
 
 
 def create_context_from_angles(plant, name_to_angle_dict):
+    """
+
+    :param plant:
+    :param name_to_angle_dict:
+    :return:
+    """
     context = plant.CreateDefaultContext()
 
     for name, angle in name_to_angle_dict.items():

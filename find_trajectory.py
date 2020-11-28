@@ -1,13 +1,20 @@
 from import_helper import *
 
 
-def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacles=None, apex_hard_constraint=False, td_hard_constraint=False):
-    '''
-    Parameters:
-      N - number of knot points
-      initial_state - starting configuration
-    '''
+def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacles=None, apex_hard_constraint=False,
+                         td_hard_constraint=False):
+    """
 
+    :param N:
+    :param initial_state:
+    :param final_state:
+    :param apex_state:
+    :param tf:
+    :param obstacles: 
+    :param apex_hard_constraint:
+    :param td_hard_constraint:
+    :return:
+    """
     context, single_leg, plant, plant_context = get_plant()
 
     # Dimensions specific to the single_leg
@@ -140,7 +147,6 @@ if __name__ == '__main__':
     # end of step
     # initial_state = np.array([0, -2.0, 1.5, 0, 0, 0])
     # final_state = np.array([0, -1.5, 2.5, 0, 0, 0])
-
 
     # Large step
     initial_state = np.array([0, -2.5, 2.5, 0, 0, 0])

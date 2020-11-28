@@ -11,21 +11,36 @@ from helper import *
 
 class Obstacles:
     def __init__(self, N=5, multi_constraint=False):
-        self.xy_offset = [.15, 0.1]
-        self.roi_dims = np.array([0.25, 0.25])
+        self.xy_offset = [.1, 0.0]
+        self.roi_dims = np.array([0.5, 0.5])
         self.multi_constraint = multi_constraint
 
-        self.voxels_per_meter = 200  # 0.5cm resolution
+        self.voxels_per_meter = 100  # 1cm resolution
         self.heightmap = np.zeros(np.round(self.roi_dims * self.voxels_per_meter).astype(np.int))
 
-        self.cubes = self.gen_rand_obst_cubes(N, 0.02, 0.1)
+        # if using random
+        # self.cubes = self.gen_rand_obst_cubes(N, 0.02, 0.1)
+
+        # if using known
         self.cubes = self.get_known_cubes()
+        self.heightmap_from_known_obst()
 
         self.heightmap = cv2.rotate(self.heightmap, cv2.ROTATE_180)
 
-        # self.visualize_heightmap()
+        self.hmap_obst = []
+        self.discretize_heightmap()
+        self.visualize_heightmap()
 
     def gen_rand_obst_cubes(self, N, min_size=0.02, max_size=0.05, min_height=0, max_height=0.1):
+        """
+
+        :param N:
+        :param min_size:
+        :param max_size:
+        :param min_height:
+        :param max_height:
+        :return:
+        """
         obst = []
         for i in range(N):
             size = np.random.rand() * (max_size - min_size) + min_size
@@ -50,28 +65,95 @@ class Obstacles:
             obst.append((loc_x, loc_y, size, height))
         return obst
 
+    def heightmap_from_known_obst(self):
+        """
+
+        """
+        for i, cube in enumerate(self.cubes):
+            loc_x, loc_y, size, height = cube
+
+            hmap_x = int((loc_x - self.xy_offset[0]) * self.voxels_per_meter)
+            hmap_y = int((loc_y - self.xy_offset[1]) * self.voxels_per_meter)
+            half_size_hmap = int(size * self.voxels_per_meter / 2)
+
+            print("loc_x", loc_x, "loc_y", loc_y, "hmap_x", hmap_x, "hmap_y", hmap_y, "half_size_hmap", half_size_hmap)
+
+            print(max(hmap_x - half_size_hmap, 0), min(hmap_x + half_size_hmap, self.heightmap.shape[0]))
+            print(max(hmap_y - half_size_hmap, 0), min(hmap_y + half_size_hmap, self.heightmap.shape[1]))
+
+            # have to do this manually cuz min/max calls on pydrake expressions are a pain
+            min_x = hmap_x - half_size_hmap if hmap_x - half_size_hmap > 0 else 0
+            min_y = hmap_y - half_size_hmap if hmap_y - half_size_hmap > 0 else 0
+
+            max_x = hmap_x + half_size_hmap if hmap_x + half_size_hmap < self.heightmap.shape[0] else \
+            self.heightmap.shape[0]
+            max_y = hmap_y + half_size_hmap if hmap_y + half_size_hmap < self.heightmap.shape[1] else \
+            self.heightmap.shape[1]
+
+            for r in range(min_x, max_x):
+                for c in range(min_y, max_y):
+                    if size > self.heightmap[r, c]:
+                        self.heightmap[r, c] = height
+
+    def discretize_heightmap(self, full_column=False):
+        """
+
+        :param full_column:
+        """
+        for i in range(self.heightmap.shape[0]):
+            for j in range(self.heightmap.shape[1]):
+                z_val = self.heightmap[i, j]
+                x = i / self.voxels_per_meter
+                y = j / self.voxels_per_meter
+                size = 1.0 / self.voxels_per_meter
+                # print("z_val", z_val, "x", x, "y", y, "size", size)
+
+                if full_column:
+                    for k in range(int(round(z_val * self.voxels_per_meter))):
+                        height = k / self.voxels_per_meter
+
+                else:
+                    self.hmap_obst.append([x, y, size, z_val])
+
+        print("Num obst from hmap:", len(self.hmap_obst))
+
     def visualize_heightmap(self):
+        """
+        Visualize a normalized, resized heightmap for debugging.
+        """
         disp_image = cv2.normalize(self.heightmap, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8UC1)
         disp_image = cv2.resize(disp_image, (200, 200), interpolation=cv2.INTER_AREA)
-        cv2.imshow("test", disp_image)
+        cv2.imshow("viz heightmap", disp_image)
         cv2.waitKey(1000)
 
     def get_known_cubes(self):
-        return [(0.25, 0.1, 0.2, 0.1), (0.25, 0.4, 0.1, 0.1)]
+        """
+
+        :return:
+        """
+        return [(0.25, 0.1, 0.2, 0.2), (0.25, 0.4, 0.1, 0.1)]
         # return [(0.25, 0.25, 0.2, 0.1)]
 
-    def add_constraints(self, prog, N, x, context, single_leg, plant, plant_context):
+    def add_constraints(self, prog, N, x, context, single_leg, plant, plant_context, hmap_constraints=True):
+        """
+
+        :param prog:
+        :param N:
+        :param x:
+        :param context:
+        :param single_leg:
+        :param plant:
+        :param plant_context:
+        :param hmap_constraints:
+        :return:
+        """
         world_frame = single_leg.world_frame()
 
         frame_names = ["toe0", "lower0", "upper0"]
         second_frame_names = [None, "toe0", "lower0"]
-        # second_frame_names = [None, "toe0", None]
         frame_radii = {"toe0": 0.02, "lower0": 0.02, "upper0": 0.05}
-        frames = []
-        for name in frame_names:
-            frames.append(single_leg.GetFrameByName(name))
 
-        # print("base_frame", base_frame)
+        frames = [single_leg.GetFrameByName(name) for name in frame_names]
 
         # Functor for getting distance to obstacle
         class Obstacle_Distance:
@@ -142,38 +224,57 @@ class Obstacles:
                 """Gets a frame from a plant whose scalar type may be different."""
                 return plant.GetFrameByName(F.name(), F.model_instance())
 
-        # Add constraints
-        for cube in self.cubes:
-            radius = np.sqrt(3) * cube[2] / 2
-            obs_xyz = [cube[0], cube[1], radius]
-
+        def add_one_obstacle_constraints(radius, obs_xyz):
             for i in range(N):
                 for j, frame in enumerate(frames):
                     distance_functor = Obstacle_Distance(obs_xyz, frame, multi_constraint=self.multi_constraint)
-                    # print(x[i])
-                    # print(radius)
-                    prog.AddConstraint(
-                        distance_functor,
-                        lb=[radius + frame_radii[frame.name()]], ub=[float('inf')], vars=x[i])
+
+                    prog.AddConstraint(distance_functor,
+                                       lb=[radius + frame_radii[frame.name()]], ub=[float('inf')], vars=x[i])
 
                     if second_frame_names[j] is not None:
                         distance_functor = Obstacle_Distance(obs_xyz, frame, multi_constraint=self.multi_constraint,
                                                              second_frame=single_leg.GetFrameByName(
                                                                  second_frame_names[j]))
-                        prog.AddConstraint(
-                            distance_functor,
-                            lb=[radius + frame_radii[frame.name()]], ub=[float('inf')], vars=x[i])
+                        prog.AddConstraint(distance_functor,
+                                           lb=[radius + frame_radii[frame.name()]], ub=[float('inf')], vars=x[i])
 
-    def draw(self, visualizer):
-        for i, cube in enumerate(self.cubes):
-            loc_x, loc_y, size, height = cube
-            # visualizer.vis["cube-" + str(i)].set_object(geom.Box([size, size, size]),
-            #                                             geom.MeshLambertMaterial(color=0xff22dd, reflectivity=0.8))
-            # visualizer.vis["cube-" + str(i)].set_transform(tforms.translation_matrix([loc_x, loc_y, size / 2.0]))
+        # Add constraints
+        if not hmap_constraints:
+            for cube in self.cubes:
+                radius = np.sqrt(3) * cube[2] / 2
+                obs_xyz = [cube[0], cube[1], radius]
 
-            radius = np.sqrt(3) * size / 2
-            visualizer.vis["sphere-" + str(i)].set_object(geom.Sphere(radius),
-                                                          geom.MeshLambertMaterial(
-                                                              color=0xff22dd,
-                                                              reflectivity=0.8))
-            visualizer.vis["sphere-" + str(i)].set_transform(tforms.translation_matrix([loc_x, loc_y, radius]))
+                add_one_obstacle_constraints(radius, obs_xyz)
+
+        elif hmap_constraints:
+            for obst in self.hmap_obst:
+                radius = np.sqrt(3) * obst[2] / 2
+                obs_xyz = [obst[0], obst[1], obst[3]]
+
+                add_one_obstacle_constraints(radius, obs_xyz)
+
+    def draw(self, visualizer, hmap_obst=True):
+        """
+
+        :param hmap_obst:
+        :param visualizer:
+        """
+        if not hmap_obst:
+            for i, cube in enumerate(self.cubes):
+                loc_x, loc_y, size, height = cube
+                radius = np.sqrt(3) * size / 2
+
+                visualizer.vis["sphere-" + str(i)].set_object(geom.Sphere(radius),
+                                                              geom.MeshLambertMaterial(color=0xff22dd,
+                                                                                       reflectivity=0.8))
+                visualizer.vis["sphere-" + str(i)].set_transform(tforms.translation_matrix([loc_x, loc_y, radius]))
+
+        elif hmap_obst:
+            for i, sph in enumerate(self.hmap_obst):
+                x, y, size, z = sph
+                radius = np.sqrt(3) * size / 2
+                visualizer.vis["sphere-" + str(i)].set_object(geom.Sphere(radius),
+                                                              geom.MeshLambertMaterial(color=0xffdd22,
+                                                                                       reflectivity=0.8))
+                visualizer.vis["sphere-" + str(i)].set_transform(tforms.translation_matrix([x, y, z]))

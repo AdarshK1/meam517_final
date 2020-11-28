@@ -1,7 +1,12 @@
 from import_helper import *
 from matplotlib import pyplot as plt
 
+
 def build_viz_plant():
+    """
+
+    :return:
+    """
     # Create a MultibodyPlant for the arm
     file_name = "leg_v2.urdf"
     builder = DiagramBuilder()
@@ -14,6 +19,13 @@ def build_viz_plant():
 
 
 def assemble_visualizer(builder, scene_graph, single_leg, x_traj_source):
+    """
+
+    :param builder:
+    :param scene_graph:
+    :param single_leg:
+    :param x_traj_source:
+    """
     demux = builder.AddSystem(Demultiplexer(np.array([3, 3])))
     to_pose = builder.AddSystem(MultibodyPositionToGeometryPose(single_leg))
     zero_inputs = builder.AddSystem(ConstantVectorSource(np.zeros(3)))
@@ -28,6 +40,14 @@ def assemble_visualizer(builder, scene_graph, single_leg, x_traj_source):
 
 
 def draw_trace(x_traj, visualizer, tf, num_points=1000, plot=False):
+    """
+
+    :param x_traj:
+    :param visualizer:
+    :param tf:
+    :param num_points:
+    :param plot:
+    """
     context, single_leg, plant, plant_context = get_plant()
 
     toe_pos_array = np.zeros((3, num_points))
@@ -78,6 +98,14 @@ def draw_trace(x_traj, visualizer, tf, num_points=1000, plot=False):
 
 
 def do_viz(x_traj, u_traj, tf, n_play=1, obstacles=None):
+    """
+
+    :param x_traj:
+    :param u_traj:
+    :param tf:
+    :param n_play:
+    :param obstacles:
+    """
     server_args = ['--ngrok_http_tunnel']
 
     zmq_url = "tcp://127.0.0.1:6000"
