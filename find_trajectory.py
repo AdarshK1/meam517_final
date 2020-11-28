@@ -10,7 +10,7 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
     :param final_state:
     :param apex_state:
     :param tf:
-    :param obstacles: 
+    :param obstacles:
     :param apex_hard_constraint:
     :param td_hard_constraint:
     :return:
@@ -61,7 +61,7 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
     AddCollocationConstraints(prog, single_leg, context, N, x, u, timesteps)
 
     # Add constraint to remain above ground
-    # AddAboveGroundConstraint(prog, context, single_leg, plant, plant_context, x, N)
+    AddAboveGroundConstraint(prog, context, single_leg, plant, plant_context, x, N)
 
     Q = np.eye(n_u * N)
 
@@ -131,7 +131,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    N = 35
+    N = 25
     # nominal stance
     # initial_state = np.array([0, -2.0, 2.0, 0, 0, 0])
 

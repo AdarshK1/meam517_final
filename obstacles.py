@@ -15,7 +15,7 @@ class Obstacles:
         self.roi_dims = np.array([0.5, 0.5])
         self.multi_constraint = multi_constraint
 
-        self.voxels_per_meter = 100  # 1cm resolution
+        self.voxels_per_meter = 25  # 2cm resolution
         self.heightmap = np.zeros(np.round(self.roi_dims * self.voxels_per_meter).astype(np.int))
 
         # if using random
@@ -26,10 +26,11 @@ class Obstacles:
         self.heightmap_from_known_obst()
 
         self.heightmap = cv2.rotate(self.heightmap, cv2.ROTATE_180)
+        self.heightmap = cv2.flip(self.heightmap, 1)  # flip around y axis
 
         self.hmap_obst = []
         self.discretize_heightmap()
-        self.visualize_heightmap()
+        # self.visualize_heightmap()
 
     def gen_rand_obst_cubes(self, N, min_size=0.02, max_size=0.05, min_height=0, max_height=0.1):
         """
@@ -78,15 +79,13 @@ class Obstacles:
 
             print("loc_x", loc_x, "loc_y", loc_y, "hmap_x", hmap_x, "hmap_y", hmap_y, "half_size_hmap", half_size_hmap)
 
-            print(max(hmap_x - half_size_hmap, 0), min(hmap_x + half_size_hmap, self.heightmap.shape[0]))
-            print(max(hmap_y - half_size_hmap, 0), min(hmap_y + half_size_hmap, self.heightmap.shape[1]))
-
             # have to do this manually cuz min/max calls on pydrake expressions are a pain
             min_x = hmap_x - half_size_hmap if hmap_x - half_size_hmap > 0 else 0
             min_y = hmap_y - half_size_hmap if hmap_y - half_size_hmap > 0 else 0
 
             max_x = hmap_x + half_size_hmap if hmap_x + half_size_hmap < self.heightmap.shape[0] else \
             self.heightmap.shape[0]
+
             max_y = hmap_y + half_size_hmap if hmap_y + half_size_hmap < self.heightmap.shape[1] else \
             self.heightmap.shape[1]
 
@@ -95,7 +94,7 @@ class Obstacles:
                     if size > self.heightmap[r, c]:
                         self.heightmap[r, c] = height
 
-    def discretize_heightmap(self, full_column=False):
+    def discretize_heightmap(self, full_column=True):
         """
 
         :param full_column:
@@ -111,8 +110,9 @@ class Obstacles:
                 if full_column:
                     for k in range(int(round(z_val * self.voxels_per_meter))):
                         height = k / self.voxels_per_meter
+                        self.hmap_obst.append([x, y, size, height])
 
-                else:
+                elif z_val > 0:
                     self.hmap_obst.append([x, y, size, z_val])
 
         print("Num obst from hmap:", len(self.hmap_obst))
@@ -131,7 +131,8 @@ class Obstacles:
 
         :return:
         """
-        return [(0.25, 0.1, 0.2, 0.2), (0.25, 0.4, 0.1, 0.1)]
+        return [(0.25, 0.1, 0.2, 0.2), (0.25, 0.3, 0.1, 0.1)]
+        # return [(0.25, 0.1, 0.2, 0.2), (0.25, 0.4, 0.1, 0.1)]
         # return [(0.25, 0.25, 0.2, 0.1)]
 
     def add_constraints(self, prog, N, x, context, single_leg, plant, plant_context, hmap_constraints=True):
