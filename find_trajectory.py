@@ -2,7 +2,7 @@ from import_helper import *
 
 
 def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacles=None, apex_hard_constraint=False,
-                         td_hard_constraint=False):
+                         td_hard_constraint=False, with_spline=True):
     """
 
     :param N:
@@ -90,19 +90,9 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
     # add initial guesses and quadratic errors from nominal
     AddInitialGuessQuadraticError(prog, initial_state, final_state, apex_state, N, n_u, n_x, u, x)
 
-    # print("\n", "-" * 50)
-    # print("Costs")
-    # print("generic_costs", prog.generic_costs())
-    # print("linear_costs", prog.linear_costs())
-    # print("quadratic_costs", prog.quadratic_costs())
-    # print("-" * 50, "\n")
-
-    # print("initial guesses")
-
     # Set up solver
     solver = SnoptSolver()
     result = solver.Solve(prog)
-    # print("solved")
 
     x_sol = result.GetSolution(x)
     u_sol = result.GetSolution(u)
@@ -115,6 +105,9 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
     xdot_sol = np.zeros(x_sol.shape)
     for i in range(N):
         xdot_sol[i] = EvaluateDynamics(plant, plant_context, x_sol[i], u_sol[i])
+
+    if not with_spline:
+        return result.get_solution_result(), x_sol, u_sol, xdot_sol, timesteps, obstacles.heightmap, obstacles
 
     x_traj = PiecewisePolynomial.CubicHermite(timesteps, x_sol.T, xdot_sol.T)
     u_traj = PiecewisePolynomial.FirstOrderHold(timesteps, u_sol.T)

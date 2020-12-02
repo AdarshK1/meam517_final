@@ -7,7 +7,7 @@ from pydrake.systems.framework import DiagramBuilder
 from pydrake.systems.analysis import Simulator
 
 from pydrake.all import (
-    DiagramBuilder, Simulator
+    DiagramBuilder, Simulator, SolutionResult
 )
 
 from pydrake.multibody.tree import (
