@@ -76,8 +76,8 @@ if __name__ == '__main__':
     final_state = np.array([0, -1.5, 2.2, 0, 0, 0])
 
     # standard deviations
-    angle_std = 0.0#25
-    vel_std = 0.0
+    angle_std = 0.0  # 0.10
+    vel_std = 0.0  # 0.25
 
     # final time
     tf = 2
@@ -101,7 +101,6 @@ if __name__ == '__main__':
                        "obstacles": obstacles,
                        "tf": tf})
 
-
     threads = []
     initial_len = len(states)
     while len(states) > 0:
@@ -111,9 +110,10 @@ if __name__ == '__main__':
             if thread.is_alive():
                 active_count += 1
 
-        print("Currently active threads: ", active_count)
-        print("Remaining States: ", len(states))
-        print("Progress: ", 1 - len(states) / initial_len)
+        print("Currently active threads: {}".format(active_count))
+        print("Remaining States: {}".format(len(states)))
+        print("Progress: {:.02f}".format(1 - len(states) / initial_len))
+        print("-" * 75)
         if active_count < n_threads:
             threads.append(Process(target=call_find_trajectory, args=(states.pop(),)))
             threads[-1].start()
