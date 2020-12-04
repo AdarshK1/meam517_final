@@ -15,14 +15,20 @@ class Obstacles:
         self.roi_dims = np.array([0.5, 0.5])
         self.multi_constraint = multi_constraint
 
-        self.voxels_per_meter = 25  # 2cm resolution
+        self.voxels_per_meter = 30
+        self.meters_per_voxel = 1.0 / self.voxels_per_meter
         self.heightmap = np.zeros(np.round(self.roi_dims * self.voxels_per_meter).astype(np.int))
 
         # if using random
-        # self.cubes = self.gen_rand_obst_cubes(N, 0.02, 0.1)
+        self.cubes = self.gen_rand_obst_cubes(N,
+                                              min_size=self.meters_per_voxel,
+                                              max_size=5*self.meters_per_voxel,
+                                              min_height=self.meters_per_voxel,
+                                              max_height=5*self.meters_per_voxel)
 
         # if using known
-        self.cubes = self.get_known_cubes()
+        # self.cubes = self.get_known_cubes()
+        # print("cubes", self.cubes)
         self.heightmap_from_known_obst()
 
         self.heightmap = cv2.rotate(self.heightmap, cv2.ROTATE_180)
@@ -53,7 +59,7 @@ class Obstacles:
             hmap_x = int(loc_x * self.voxels_per_meter)  # + self.roi_dims[0] * self.voxels_per_meter / 2)
             hmap_y = int(loc_y * self.voxels_per_meter)  # + self.roi_dims[1] * self.voxels_per_meter / 2)
             half_size_hmap = int(size * self.voxels_per_meter / 2)
-            print("loc_x", loc_x, "loc_y", loc_y, "hmap_x", hmap_x, "hmap_y", hmap_y, "half_size_hmap", half_size_hmap)
+            # print("loc_x", loc_x, "loc_y", loc_y, "hmap_x", hmap_x, "hmap_y", hmap_y, "half_size_hmap", half_size_hmap)
 
             for r in range(hmap_x - half_size_hmap, hmap_x + half_size_hmap):
                 for c in range(hmap_y - half_size_hmap, hmap_y + half_size_hmap):
@@ -77,7 +83,7 @@ class Obstacles:
             hmap_y = int((loc_y - self.xy_offset[1]) * self.voxels_per_meter)
             half_size_hmap = int(size * self.voxels_per_meter / 2)
 
-            print("loc_x", loc_x, "loc_y", loc_y, "hmap_x", hmap_x, "hmap_y", hmap_y, "half_size_hmap", half_size_hmap)
+            # print("loc_x", loc_x, "loc_y", loc_y, "hmap_x", hmap_x, "hmap_y", hmap_y, "half_size_hmap", half_size_hmap)
 
             # have to do this manually cuz min/max calls on pydrake expressions are a pain
             min_x = hmap_x - half_size_hmap if hmap_x - half_size_hmap > 0 else 0
@@ -88,10 +94,11 @@ class Obstacles:
 
             max_y = hmap_y + half_size_hmap if hmap_y + half_size_hmap < self.heightmap.shape[1] else \
             self.heightmap.shape[1]
+            # print(min_x, max_x, min_y, max_y, height)
 
-            for r in range(min_x, max_x):
-                for c in range(min_y, max_y):
-                    if size > self.heightmap[r, c]:
+            for r in range(min_x, max_x + 1):
+                for c in range(min_y, max_y + 1):
+                    if height > self.heightmap[r, c]:
                         self.heightmap[r, c] = height
 
     def discretize_heightmap(self, full_column=True):

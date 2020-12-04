@@ -1,9 +1,12 @@
 from import_helper import *
 
-from find_trajectory import find_step_trajectory
+from find_trajectory import find_step_trajectory, multi_step_solve
 
-from multiprocessing import Pool
+from multiprocessing import Pool, Process
+import threading
 import pickle
+from datetime import datetime
+
 
 def randomize_state(initial, apex, final, angle_std=0.25, vel_std=0.5):
     initial[0] += np.random.random() * angle_std - angle_std / 2
@@ -37,67 +40,97 @@ def randomize_state(initial, apex, final, angle_std=0.25, vel_std=0.5):
 
 
 def call_find_trajectory(args):
-    return find_step_trajectory(args["N"],
+    solved = multi_step_solve(args["N"],
                                 args["initial_state"],
                                 args["final_state"],
                                 args["apex_state"],
                                 args["tf"],
-                                obstacles=args["obstacles"],
-                                with_spline=False)
+                                obstacles=args["obstacles"])
+
+    # can't pickle trajectories
+    solved.pop('x_traj', None)
+    solved.pop('u_traj', None)
+
+    # filename
+    dt = datetime.now().strftime("%m_%d_%H_%M_%S")
+    path = data_dir + "{}.pkl"
+
+    # dump
+    pickle.dump((args, solved), open(path.format(dt), 'wb'))
+    return solved
 
 
 if __name__ == '__main__':
 
     n_threads = 32
-    n_outputs = 5000
+    n_outputs = 1000
 
     overall_counter = 0
-    data_dir = "data/"
+    data_dir = "data_v2/"
 
-    for i in range(int(n_outputs / n_threads)):
-        N = 35
-        # default values
-        apex_state = np.array([0, -3.0, 1.5, 0, 0, 0])
-        initial_state = np.array([0, -2.5, 2.5, 0, 0, 0])
-        final_state = np.array([0, -1.5, 2.2, 0, 0, 0])
+    print("FIX THE NOUGHTS")
+    N = 35
+    # default values
+    apex_state = np.array([0, -3.0, 1.5, 0, 0, 0])
+    initial_state = np.array([0, -2.5, 2.5, 0, 0, 0])
+    final_state = np.array([0, -1.5, 2.2, 0, 0, 0])
 
-        # standard deviations
-        angle_std = 0.25
-        vel_std = 0.5
+    # standard deviations
+    angle_std = 0.25
+    vel_std = 0.5
 
-        # final time
-        tf = 2
+    # final time
+    tf = 2
 
-        states = []
+    states = []
 
-        # randomize n_threads of inputs
-        for j in range(n_threads):
-            # now randomize start, apex, final
-            initial_state, apex_state, final_state = randomize_state(initial_state, apex_state, final_state, angle_std,
-                                                                     vel_std)
+    # generate all the cases
+    for i in range(n_outputs):
+        # now randomize start, apex, final
+        initial_state, apex_state, final_state = randomize_state(initial_state, apex_state, final_state, angle_std,
+                                                                 vel_std)
 
-            # obstacles
-            n_obst = np.random.normal(10, 5)
-            obstacles = Obstacles(N=n_obst, multi_constraint=True)
+        # obstacles
+        n_obst = int(round(np.random.normal(4, 2)))
+        obstacles = Obstacles(N=n_obst, multi_constraint=True)
 
-            states.append({"N": N,
-                           "initial_state": initial_state,
-                           "apex_state": apex_state,
-                           "final_state": final_state,
-                           "obstacles": obstacles,
-                           "tf": tf})
+        states.append({"N": N,
+                       "initial_state": initial_state,
+                       "apex_state": apex_state,
+                       "final_state": final_state,
+                       "obstacles": obstacles,
+                       "tf": tf})
+
+
+    threads = []
+    initial_len = len(states)
+    while len(states) > 0:
+        time.sleep(2)
+        active_count = 0
+        for thread in threads:
+            if thread.is_alive():
+                active_count += 1
+
+        print("Currently active threads: ", active_count)
+        print("Remaining States: ", len(states))
+        print("Progress: ", 1 - len(states) / initial_len)
+        if active_count < n_threads:
+            threads.append(Process(target=call_find_trajectory, args=(states.pop(),)))
+            threads[-1].start()
+
+
 
         # now solve all the trajs
-        with Pool(n_threads) as p:
-            outputs = p.map(call_find_trajectory, states)
-
-            print(len(states))
-            print("states: ", states[0])
-            print(len(outputs))
-            print("outputs: ", outputs[0])
-
-            for j in range(n_threads):
-
-                path = data_dir + "{:0>6d}.pkl"
-                pickle.dump((states[j], outputs[j]), open(path.format(overall_counter), 'wb'))
-                overall_counter += 1
+        # with Pool(n_threads) as p:
+        #     outputs = p.map(call_find_trajectory, states)
+        #     print("-" * 75)
+        #     print("FINISHED A POOL")
+        #     print("-" * 75)
+        #     print("\n" * 4)
+        #
+        #     for j in range(n_threads):
+        #
+        #         path = data_dir + "{:0>6d}.pkl"
+        #         pickle.dump((states[j], outputs[j]), open(path.format(overall_counter), 'wb'))
+        #         print("Wrote: ", path.format(overall_counter))
+        #         overall_counter += 1

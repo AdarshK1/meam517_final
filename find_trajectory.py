@@ -72,6 +72,7 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
 
     # multiplying the cost on abduction doesn't actually solve the crazy abduction problem, it makes it worse because
     # it now refuses to fight gravity!
+    # setting ab cost to 0 so far yields the most logical results
     for i in range(N):
         Q[n_u * i] *= 0
 
@@ -118,19 +119,59 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
         xdot_sol[i] = EvaluateDynamics(plant, plant_context, x_sol[i], u_sol[i])
 
     if not with_spline:
-        return result.get_solution_result(), x_sol, u_sol, xdot_sol, timesteps, obstacles.heightmap, obstacles
+        out_dict = {"result.get_solution_result()": result.get_solution_result(),
+                    "x_sol": x_sol,
+                    "u_sol": u_sol,
+                    "xdot_sol": xdot_sol,
+                    "timesteps": timesteps,
+                    "obstacles.heightmap": obstacles.heightmap,
+                    "obstacles": obstacles}
+        return out_dict
 
     x_traj = PiecewisePolynomial.CubicHermite(timesteps, x_sol.T, xdot_sol.T)
     u_traj = PiecewisePolynomial.FirstOrderHold(timesteps, u_sol.T)
 
-    return x_traj, u_traj, prog, prog.GetInitialGuess(x), prog.GetInitialGuess(u)
+    return x_traj, u_traj, x_sol, u_sol, xdot_sol, timesteps, prog, result
+
+
+def multi_step_solve(N, initial_state, final_state, apex_state, tf, obstacles=None, apex_hard_constraint=False,
+                     td_hard_constraint=False):
+    x_traj = None
+    u_traj = None
+
+    for knot_num in [15, N]:
+        print("Solving with N=" + str(knot_num))
+        t3 = time.time()
+        x_traj, u_traj, x_sol, u_sol, xdot_sol, timesteps, prog, result = find_step_trajectory(knot_num,
+                                                                                               initial_state,
+                                                                                               final_state,
+                                                                                               apex_state,
+                                                                                               tf,
+                                                                                               obstacles,
+                                                                                               x_spline_guess=x_traj,
+                                                                                               u_spline_guess=u_traj,
+                                                                                               apex_hard_constraint=apex_hard_constraint,
+                                                                                               td_hard_constraint=td_hard_constraint,
+                                                                                               with_spline=True)
+        t4 = time.time()
+        print("Time to solve: " + str(round(t4 - t3, 2)), "for ", knot_num)
+
+    out_dict = {"result.get_solution_result()": result.get_solution_result(),
+                "x_sol": x_sol,
+                "x_traj": x_traj,
+                "u_sol": u_sol,
+                "u_traj": u_traj,
+                "xdot_sol": xdot_sol,
+                "timesteps": timesteps,
+                "obstacles": obstacles}
+    return out_dict
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Swing a leg.')
     parser.add_argument('--use_viz', action='store_true')
     parser.add_argument('--obstacles', action='store_true')
-    parser.add_argument('--n_obst', default=1)
+    parser.add_argument('--n_obst', default=4)
     parser.add_argument('--n_play', default=1)
 
     args = parser.parse_args()
@@ -171,26 +212,11 @@ if __name__ == '__main__':
     tf = 2.0
 
     t1 = time.time()
-
-    x_traj=None
-    u_traj=None
-    x_guess=None
-    u_guess=None
-    # for knot_num in list(range(10, N, 10)) + [N]:
-    for knot_num in [15, N]:
-    # for knot_num in [N]:
-        print("Solving with N=" + str(knot_num))
-        t3 = time.time()
-        x_traj, u_traj, prog, x_guess, u_guess = find_step_trajectory(knot_num, initial_state, final_state, apex_state,
-                                                                      tf,
-                                                                      obstacles, x_spline_guess=x_traj,
-                                                                      u_spline_guess=u_traj)
-        t4 = time.time()
-        print("Time to solve: " + str(round(t4 - t3, 2)), "for ", knot_num)
+    out_dict = multi_step_solve(N, initial_state, final_state, apex_state, tf)
 
     t2 = time.time()
     print("-" * 75)
     print("Time to solve: {}; Time per N: {}".format((t2 - t1), (t2 - t1) / N))
     print("-" * 75)
     if args.use_viz:
-        do_viz(x_traj, u_traj, tf, int(args.n_play), obstacles)
+        do_viz(out_dict["x_traj"], out_dict["u_traj"], tf, int(args.n_play), obstacles)
