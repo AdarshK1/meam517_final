@@ -1,8 +1,12 @@
 from import_helper import *
 
+import warnings
+from pydrake.common.deprecation import DrakeDeprecationWarning
+warnings.simplefilter("ignore", DrakeDeprecationWarning)
+
 
 def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacles=None, apex_hard_constraint=False,
-                         td_hard_constraint=False, with_spline=True):
+                         td_hard_constraint=False, with_spline=True, spline_guess=None):
     """
 
     :param N:
@@ -88,7 +92,11 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
     AddJointBBoxConstraints(prog, n_x, N, vel_limits, x)
 
     # add initial guesses and quadratic errors from nominal
-    AddInitialGuessQuadraticError(prog, initial_state, final_state, apex_state, N, n_u, n_x, u, x)
+    if spline_guess is None:
+        AddInitialGuessQuadraticError(prog, initial_state, final_state, apex_state, N, n_u, n_x, u, x)
+    else:
+        # Set initial guess to interpolate between provided spline (x_traj)
+        AddSplineGuessQuadraticError(prog, initial_state, final_state, apex_state, N, n_u, n_x, u, x, spline_guess, tf)
 
     # Set up solver
     solver = SnoptSolver()
@@ -101,7 +109,7 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
     print(result.get_solution_result())
     print("-" * 50)
 
-    # Reconstruct the trajecotry as a cubic hermite spline
+    # Reconstruct the trajectory as a cubic hermite spline
     xdot_sol = np.zeros(x_sol.shape)
     for i in range(N):
         xdot_sol[i] = EvaluateDynamics(plant, plant_context, x_sol[i], u_sol[i])
@@ -160,8 +168,21 @@ if __name__ == '__main__':
     tf = 2.0
 
     t1 = time.time()
-    x_traj, u_traj, prog, x_guess, u_guess = find_step_trajectory(N, initial_state, final_state, apex_state, tf,
-                                                                  obstacles)
+
+    x_traj=None
+    u_traj=None
+    x_guess=None
+    u_guess=None
+    # for knot_num in list(range(10, N, 10)) + [N]:
+    # for knot_num in [10, N]:
+    for knot_num in [N]:
+        print("Solving with N=" + str(knot_num))
+        # t3 = time.time()
+        x_traj, u_traj, prog, x_guess, u_guess = find_step_trajectory(knot_num, initial_state, final_state, apex_state, tf,
+                                                                      obstacles, spline_guess=x_traj)
+        # t4 = time.time()
+        # print("Time to solve: " + str(round(t4-t3,2)))
+
     t2 = time.time()
     print("-" * 75)
     print("Time to solve: {}; Time per N: {}".format((t2 - t1), (t2 - t1) / N))

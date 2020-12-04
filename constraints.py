@@ -138,6 +138,29 @@ def AddInitialGuessQuadraticError(prog, initial_state, final_state, apex_state, 
             prog.SetInitialGuess(x[i], x_init)
             prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
 
+def AddSplineGuessQuadraticError(prog, initial_state, final_state, apex_state, N, n_u, n_x, u, x, spline_guess, tf):
+    t = np.linspace(0, tf, N)
+    for i in range(N):
+        # u_init = np.random.rand(n_u) * effort_limits * 2 - effort_limits
+        u_init = np.zeros(n_u)
+        prog.SetInitialGuess(u[i], u_init)
+
+        prog.SetInitialGuess(x[i], spline_guess.value(t[i]))
+
+        if N < 3:
+            x_init = initial_state + (i / N) * (final_state - initial_state)
+            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
+
+        elif N > 3 and i < N / 2:
+            x_init = initial_state + (i / (N / 2) ) * (apex_state - initial_state)
+            # print(i, x[i].flatten(), x_init)
+            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
+
+        else:
+            x_init = apex_state + ((i - N / 2) / (N / 2) ) * (final_state - apex_state)
+            # print(i, x[i].flatten(), x_init)
+            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
+
 
 def AddAboveGroundConstraint(prog, context, single_leg, plant, plant_context, x, N):
     for i in range(N):
