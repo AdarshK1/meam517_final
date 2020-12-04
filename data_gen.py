@@ -68,7 +68,7 @@ if __name__ == '__main__':
     overall_counter = 0
     data_dir = "data_v2/"
 
-    print("FIX THE NOUGHTS")
+    # print("FIX THE NOUGHTS")
     N = 35
     # default values
     apex_state = np.array([0, -3.0, 1.5, 0, 0, 0])
@@ -76,8 +76,8 @@ if __name__ == '__main__':
     final_state = np.array([0, -1.5, 2.2, 0, 0, 0])
 
     # standard deviations
-    angle_std = 0.25
-    vel_std = 0.5
+    angle_std = 0.0#25
+    vel_std = 0.0
 
     # final time
     tf = 2
@@ -117,20 +117,3 @@ if __name__ == '__main__':
         if active_count < n_threads:
             threads.append(Process(target=call_find_trajectory, args=(states.pop(),)))
             threads[-1].start()
-
-
-
-        # now solve all the trajs
-        # with Pool(n_threads) as p:
-        #     outputs = p.map(call_find_trajectory, states)
-        #     print("-" * 75)
-        #     print("FINISHED A POOL")
-        #     print("-" * 75)
-        #     print("\n" * 4)
-        #
-        #     for j in range(n_threads):
-        #
-        #         path = data_dir + "{:0>6d}.pkl"
-        #         pickle.dump((states[j], outputs[j]), open(path.format(overall_counter), 'wb'))
-        #         print("Wrote: ", path.format(overall_counter))
-        #         overall_counter += 1
