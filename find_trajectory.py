@@ -2,11 +2,12 @@ from import_helper import *
 
 import warnings
 from pydrake.common.deprecation import DrakeDeprecationWarning
+
 warnings.simplefilter("ignore", DrakeDeprecationWarning)
 
 
 def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacles=None, apex_hard_constraint=False,
-                         td_hard_constraint=False, with_spline=True, spline_guess=None):
+                         td_hard_constraint=False, with_spline=True, x_spline_guess=None, u_spline_guess=None):
     """
 
     :param N:
@@ -67,7 +68,7 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
     # Add constraint to remain above ground
     AddAboveGroundConstraint(prog, context, single_leg, plant, plant_context, x, N)
 
-    Q = np.eye(n_u * N)
+    Q = np.eye(n_u * N) * 0.25
 
     # multiplying the cost on abduction doesn't actually solve the crazy abduction problem, it makes it worse because
     # it now refuses to fight gravity!
@@ -76,7 +77,8 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
 
     b = np.zeros([n_u * N, 1])
     # getting rid of cost on control for now, this is making it not fight gravity!
-    # prog.AddQuadraticCost(Q, b, u.flatten())
+    if x_spline_guess is None:
+        prog.AddQuadraticCost(Q, b, u.flatten())
     # print("Added quadcost")
 
     # Add rate limiting constraint
@@ -92,11 +94,12 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
     AddJointBBoxConstraints(prog, n_x, N, vel_limits, x)
 
     # add initial guesses and quadratic errors from nominal
-    if spline_guess is None:
+    if x_spline_guess is None:
         AddInitialGuessQuadraticError(prog, initial_state, final_state, apex_state, N, n_u, n_x, u, x)
     else:
         # Set initial guess to interpolate between provided spline (x_traj)
-        AddSplineGuessQuadraticError(prog, initial_state, final_state, apex_state, N, n_u, n_x, u, x, spline_guess, tf)
+        AddSplineGuessQuadraticError(prog, initial_state, final_state, apex_state, N, n_u, n_x, u, x, x_spline_guess,
+                                     u_spline_guess, tf)
 
     # Set up solver
     solver = SnoptSolver()
@@ -132,7 +135,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    N = 25
+    N = 35
     # nominal stance
     # initial_state = np.array([0, -2.0, 2.0, 0, 0, 0])
 
@@ -174,14 +177,16 @@ if __name__ == '__main__':
     x_guess=None
     u_guess=None
     # for knot_num in list(range(10, N, 10)) + [N]:
-    # for knot_num in [10, N]:
-    for knot_num in [N]:
+    for knot_num in [15, N]:
+    # for knot_num in [N]:
         print("Solving with N=" + str(knot_num))
-        # t3 = time.time()
-        x_traj, u_traj, prog, x_guess, u_guess = find_step_trajectory(knot_num, initial_state, final_state, apex_state, tf,
-                                                                      obstacles, spline_guess=x_traj)
-        # t4 = time.time()
-        # print("Time to solve: " + str(round(t4-t3,2)))
+        t3 = time.time()
+        x_traj, u_traj, prog, x_guess, u_guess = find_step_trajectory(knot_num, initial_state, final_state, apex_state,
+                                                                      tf,
+                                                                      obstacles, x_spline_guess=x_traj,
+                                                                      u_spline_guess=u_traj)
+        t4 = time.time()
+        print("Time to solve: " + str(round(t4 - t3, 2)), "for ", knot_num)
 
     t2 = time.time()
     print("-" * 75)

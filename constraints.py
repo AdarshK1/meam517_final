@@ -3,6 +3,7 @@ from pydrake.autodiffutils import AutoDiffXd
 
 from helper import get_world_position
 
+
 def cos(theta):
     return AutoDiffXd.cos(theta)
 
@@ -127,39 +128,42 @@ def AddInitialGuessQuadraticError(prog, initial_state, final_state, apex_state, 
             prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
 
         elif N > 3 and i < N / 2:
-            x_init = initial_state + (i / (N / 2) ) * (apex_state - initial_state)
+            x_init = initial_state + (i / (N / 2)) * (apex_state - initial_state)
             # print(i, x[i].flatten(), x_init)
             prog.SetInitialGuess(x[i], x_init)
             prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
 
         else:
-            x_init = apex_state + ((i - N / 2) / (N / 2) ) * (final_state - apex_state)
+            x_init = apex_state + ((i - N / 2) / (N / 2)) * (final_state - apex_state)
             # print(i, x[i].flatten(), x_init)
             prog.SetInitialGuess(x[i], x_init)
             prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
 
-def AddSplineGuessQuadraticError(prog, initial_state, final_state, apex_state, N, n_u, n_x, u, x, spline_guess, tf):
+
+def AddSplineGuessQuadraticError(prog, initial_state, final_state, apex_state, N, n_u, n_x, u, x, x_spline_guess,
+                                 u_spline_guess, tf):
     t = np.linspace(0, tf, N)
     for i in range(N):
         # u_init = np.random.rand(n_u) * effort_limits * 2 - effort_limits
         u_init = np.zeros(n_u)
-        prog.SetInitialGuess(u[i], u_init)
+        # prog.SetInitialGuess(u[i], u_init)
 
-        prog.SetInitialGuess(x[i], spline_guess.value(t[i]))
+        prog.SetInitialGuess(x[i], x_spline_guess.value(t[i]))
+        # print("x_spline_guess", x_spline_guess.value(t[i]))
+        prog.SetInitialGuess(u[i], u_spline_guess.value(t[i]))
+        # print("u_spline_guess", u_spline_guess.value(t[i]))
 
-        if N < 3:
-            x_init = initial_state + (i / N) * (final_state - initial_state)
-            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
-
-        elif N > 3 and i < N / 2:
-            x_init = initial_state + (i / (N / 2) ) * (apex_state - initial_state)
-            # print(i, x[i].flatten(), x_init)
-            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
-
-        else:
-            x_init = apex_state + ((i - N / 2) / (N / 2) ) * (final_state - apex_state)
-            # print(i, x[i].flatten(), x_init)
-            prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
+        # if N < 3:
+        #     x_init = initial_state + (i / N) * (final_state - initial_state)
+        #     prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
+        #
+        # elif N > 3 and i < N / 2:
+        #     x_init = initial_state + (i / (N / 2)) * (apex_state - initial_state)
+        #     prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
+        #
+        # else:
+        #     x_init = apex_state + ((i - N / 2) / (N / 2)) * (final_state - apex_state)
+        #     prog.AddQuadraticErrorCost(np.eye(int(n_x / 2)), x_init[:3], x[i][:3])
 
 
 def AddAboveGroundConstraint(prog, context, single_leg, plant, plant_context, x, N):
@@ -177,5 +181,5 @@ def AddRateLimiterConstraint(prog, N, u, x, delta_x, delta_u):
         # prog.AddConstraint(np.abs(x[i + 1] - x[i]), lb=np.zeros(6), ub=delta_x, vars=x[i:i+2])
         # prog.AddBoundingBoxConstraint(np.zeros(6), delta_x, np.abs(x[i + 1] - x[i]))
         # prog.AddLinearInequalityConstraint()
-        prog.AddLinearConstraint(abs(x[i + 1] - x[i]) <= delta_x, vars=x[i:i+2])
+        prog.AddLinearConstraint(abs(x[i + 1] - x[i]) <= delta_x, vars=x[i:i + 2])
         # prog.AddConstraint(np.abs(u[i + 1] - u[i]) <= delta_u)
