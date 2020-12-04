@@ -72,8 +72,8 @@ def find_step_trajectory(N, initial_state, final_state, apex_state, tf, obstacle
 
     # multiplying the cost on abduction doesn't actually solve the crazy abduction problem, it makes it worse because
     # it now refuses to fight gravity!
-    # for i in range(N):
-    #     Q[n_u * i] *= 0
+    for i in range(N):
+        Q[n_u * i] *= 0
 
     b = np.zeros([n_u * N, 1])
     # getting rid of cost on control for now, this is making it not fight gravity!
