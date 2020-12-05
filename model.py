@@ -10,12 +10,12 @@ class Net(nn.Module):
 
         self.with_pose = with_pose
 
-        self.conv1 = nn.Conv2d(1, 3, kernel_size=3)
+        self.conv1 = nn.Conv2d(1, 3, kernel_size=5)
         self.conv2 = nn.Conv2d(3, 6, kernel_size=3)
 
         final_output_dim = nought * (x_dim + u_dim)
 
-        self.fcn_1 = nn.Linear(6 * 11 * 11, fcn_size_1)
+        self.fcn_1 = nn.Linear(6 * 9 * 9, fcn_size_1)
         self.fcn_2 = nn.Linear(fcn_size_1, fcn_size_2)
         self.fcn_3 = nn.Linear(fcn_size_2, fcn_size_3)
         self.fcn_4 = nn.Linear(fcn_size_3, final_output_dim)

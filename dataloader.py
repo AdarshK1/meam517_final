@@ -37,6 +37,8 @@ class TrajDataset(Dataset):
         # print("u max", np.max(u_sol, axis=0))
         u_sol /= self.u_max
 
+        u_sol[abs(u_sol) < 0.001] = 0.0
+
         if self.with_x:
             concatted_sols = np.concatenate([x_sol, u_sol], axis=1).flatten()
             # print(concatted_sols.shape)

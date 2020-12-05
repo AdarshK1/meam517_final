@@ -23,14 +23,14 @@ hyperparameter_defaults = dict(
     with_x=False,
     x_dim=0,
     u_dim=3,
-    fcn_1=800,
-    fcn_2=400,
-    fcn_3=200,
+    fcn_1=1000,
+    fcn_2=1000,
+    fcn_3=500,
     u_max=75,
 )
 
 dt = datetime.now().strftime("%m_%d_%H_%M")
-name_str = "_only_u_normed"
+name_str = "_giant_net"
 wandb.init(project="517_final", config=hyperparameter_defaults, name=dt + name_str)
 config = wandb.config
 
@@ -53,7 +53,7 @@ criterion = nn.L1Loss()
 sample_fname = "/home/adarsh/software/meam517_final/data_v2/"
 dset = TrajDataset(sample_fname, with_x=config.with_x, max_u=config.u_max)
 
-train_loader = DataLoader(dset, batch_size=config.batch_size, num_workers=config.num_workers)
+train_loader = DataLoader(dset, batch_size=config.batch_size, num_workers=config.num_workers, shuffle=True)
 
 for epoch in range(config.epochs):
     for i_batch, sample_batched in enumerate(train_loader):
@@ -74,6 +74,11 @@ for epoch in range(config.epochs):
         wandb.log({'epoch': epoch, 'iteration': i_batch, 'loss': loss.item()})
         print({'epoch': epoch, 'iteration': i_batch, 'loss': loss.item()})
 
+        if i_batch == 0 and epoch % 25 == 0 and epoch > 0:
+            rand_idx = int(np.random.random() * config.batch_size)
+            print("output_gt", output)
+            print("output_pred", output_predicted.cpu().float())
+
         # backprop
         loss.backward()
         optimizer.step()  # Does the update
@@ -82,3 +87,4 @@ for epoch in range(config.epochs):
 
         torch.save(net.state_dict(), backup_path)
         t2 = time.time()
+
