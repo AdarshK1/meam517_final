@@ -2,6 +2,11 @@ from import_helper import *
 
 from find_trajectory import find_step_trajectory, multi_step_solve
 
+from obstacles import Obstacles
+from viz_helper import *
+from helper import *
+from constraints import *
+
 from multiprocessing import Pool, Process
 import threading
 import pickle

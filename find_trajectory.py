@@ -3,6 +3,11 @@ from import_helper import *
 import warnings
 from pydrake.common.deprecation import DrakeDeprecationWarning
 
+from obstacles import Obstacles
+from viz_helper import *
+from helper import *
+from constraints import *
+
 warnings.simplefilter("ignore", DrakeDeprecationWarning)
 
 

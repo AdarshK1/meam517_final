@@ -6,7 +6,8 @@ import meshcat.transformations as tforms
 import cv2
 from scipy.spatial.transform import Rotation as R
 from pydrake.all import *
-from helper import *
+from helper import (get_plant, get_limits, get_transform, get_world_position, resolve_frame, drake_quat_to_floats,
+    get_angle_from_context, set_angle_in_context, create_context_from_angles)
 
 
 class Obstacles:
@@ -22,9 +23,9 @@ class Obstacles:
         # if using random
         self.cubes = self.gen_rand_obst_cubes(N,
                                               min_size=self.meters_per_voxel,
-                                              max_size=5*self.meters_per_voxel,
+                                              max_size=5 * self.meters_per_voxel,
                                               min_height=self.meters_per_voxel,
-                                              max_height=5*self.meters_per_voxel)
+                                              max_height=5 * self.meters_per_voxel)
 
         # if using known
         # self.cubes = self.get_known_cubes()
@@ -90,10 +91,10 @@ class Obstacles:
             min_y = hmap_y - half_size_hmap if hmap_y - half_size_hmap > 0 else 0
 
             max_x = hmap_x + half_size_hmap if hmap_x + half_size_hmap < self.heightmap.shape[0] else \
-            self.heightmap.shape[0]
+                self.heightmap.shape[0]
 
             max_y = hmap_y + half_size_hmap if hmap_y + half_size_hmap < self.heightmap.shape[1] else \
-            self.heightmap.shape[1]
+                self.heightmap.shape[1]
             # print(min_x, max_x, min_y, max_y, height)
 
             for r in range(min_x, max_x + 1):

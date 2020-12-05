@@ -1,18 +1,13 @@
 import numpy as np
-import torch
 import glob
 from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
-import copy
-import time
-import os
-from import_helper import *
 import pickle
 
 
 class TrajDataset(Dataset):
-    def __init__(self, dir):
+    def __init__(self, dir, with_x=True):
         self.dir = dir
+        self.with_x = with_x
 
         self.filenames = glob.glob(self.dir + "*")
 
@@ -24,15 +19,27 @@ class TrajDataset(Dataset):
         state, output = pickle.load(open(fname, 'rb'))
 
         # print(state, output)
-        print(state.keys())
+        # print(state.keys())
+        # print(output.keys())
         # print(output)
 
-        return state, output
+        hmap = state["obstacles"].heightmap
+        hmap = hmap[np.newaxis, :, :]
+        x_sol = output["x_sol"]
+        u_sol = output["u_sol"]
+        # print(hmap.shape)
+
+        if self.with_x:
+            concatted_sols = np.concatenate([x_sol, u_sol], axis=1).flatten()
+            # print(concatted_sols.shape)
+            return hmap, concatted_sols
+
+        return hmap, u_sol.flatten()
 
 
 if __name__ == "__main__":
     N = 1
-    sample_fname = "/home/adarsh/software/meam517_final/data/"
+    sample_fname = "/home/adarsh/software/meam517_final/data_v2/"
     dset = TrajDataset(sample_fname)
     print(len(dset))
     for i in range(N):

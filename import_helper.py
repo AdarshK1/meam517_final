@@ -21,8 +21,6 @@ from pydrake.multibody.parsing import Parser
 from pydrake.trajectories import PiecewisePolynomial
 from pydrake.solvers.snopt import SnoptSolver
 
-from constraints import *
-
 import time
 from pydrake.systems.framework import DiagramBuilder
 from pydrake.systems.analysis import Simulator
@@ -48,11 +46,12 @@ from pydrake.systems.primitives import (
 )
 
 import argparse
-from helper import *
 
 import meshcat
 import meshcat.geometry as geom
 import meshcat.transformations as tforms
 
-from obstacles import Obstacles
-from viz_helper import *
+# from obstacles import Obstacles
+# from viz_helper import *
+# from helper import *
+# from constraints import *
