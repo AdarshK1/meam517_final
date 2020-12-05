@@ -67,7 +67,7 @@ def call_find_trajectory(args):
 
 if __name__ == '__main__':
 
-    n_threads = 32
+    n_threads = 48
     n_outputs = 1000
 
     overall_counter = 0
