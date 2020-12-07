@@ -9,29 +9,14 @@ import argparse
 import matplotlib.pyplot as plt
 
 
-def gen_plots(input, gt, pred, u_max=np.array([25, 25, 10])):
+def gen_plots(input, preds, gts, u_max=np.array([25, 25, 10])):
     input = input[0, 0, :, :].cpu()
-    gt = gt[0, :]
-    pred = pred[0, :]
-
-    print(input.shape, gt.shape, pred.shape)
-    u1_gt = []
-    u1_pred = []
-    u2_gt = []
-    u2_pred = []
-    u3_gt = []
-    u3_pred = []
-
-    for i in range(gt.shape[0]):
-        if i % 3 == 0:
-            u1_gt.append(gt[i] * u_max[0])
-            u1_pred.append(pred[i] * u_max[0])
-        elif i % 3 == 1:
-            u2_gt.append(gt[i] * u_max[1])
-            u2_pred.append(pred[i] * u_max[1])
-        elif i % 3 == 2:
-            u3_gt.append(gt[i] * u_max[2])
-            u3_pred.append(pred[i] * u_max[2])
+    u1_gt = gts[0][0, :]
+    u1_pred = preds[0][0, :].cpu().detach().numpy()
+    u2_gt = gts[1][0, :]
+    u2_pred = preds[1][0, :].cpu().detach().numpy()
+    u3_gt = gts[2][0, :]
+    u3_pred = preds[2][0, :].cpu().detach().numpy()
 
     fig, axs = plt.subplots(4)
     axs[0].plot(u1_gt)
@@ -60,32 +45,39 @@ args = parser.parse_args()
 
 net = Net(x_dim=0,
           u_dim=3,
-          fcn_size_1=1000,
-          fcn_size_2=1000,
-          fcn_size_3=500).cuda().float()
+          fcn_size_1=250,
+          fcn_size_2=120,
+          fcn_size_3=50).cuda().float()
 
 net.load_state_dict(torch.load(args.net_path))
 
 sample_fname = "/home/adarsh/software/meam517_final/data_v2/"
-dset = TrajDataset(sample_fname, with_x=False, max_u=75)
+dset = TrajDataset(sample_fname, with_x=False, max_u=np.array([25, 25, 10]))
 
 criterion = nn.L1Loss()
 
 test_loader = DataLoader(dset, batch_size=1, num_workers=1, shuffle=True)
 
-num_tests = 1
+num_tests = 10
 
 for i_batch, sample_batched in enumerate(test_loader):
     if i_batch == num_tests:
         break
-    input, output = sample_batched
+    input, u1_out, u2_out, u3_out = sample_batched
+
     input = input.float().cuda()
-    output = output.float()
 
-    output_predicted = net(input)
+    u1_out = u1_out.float()
+    u2_out = u2_out.float()
+    u3_out = u3_out.float()
 
-    loss = criterion(output_predicted.cpu().float(), output)
+    # forward!
+    u1_pred, u2_pred, u3_pred = net(input)
+
+    loss = criterion(u1_pred.cpu().float(), u1_out) + \
+           criterion(u2_pred.cpu().float(), u2_out) + \
+           criterion(u3_pred.cpu().float(), u3_out)
 
     print({'iteration': i_batch, 'loss': loss.item()})
 
-    gen_plots(input, output, output_predicted)
+    gen_plots(input, [u1_pred, u2_pred, u3_pred], [u1_out, u2_out, u3_out])

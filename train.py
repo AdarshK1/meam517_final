@@ -17,20 +17,20 @@ hyperparameter_defaults = dict(
     batch_size=721,
     learning_rate=0.001,
     weight_decay=0.001,
-    epochs=200,
+    epochs=300,
     test_iters=50,
     num_workers=16,
     with_x=False,
     x_dim=0,
     u_dim=3,
-    fcn_1=50,
-    fcn_2=50,
+    fcn_1=250,
+    fcn_2=120,
     fcn_3=50,
     u_max=np.array([25, 25, 10]),
 )
 
 dt = datetime.now().strftime("%m_%d_%H_%M")
-name_str = "_split_up_output_1_more_fcn_ONLY_FEASIBLE"
+name_str = "_sum_reduction"
 
 wandb.init(project="517_final", config=hyperparameter_defaults, name=dt + name_str)
 config = wandb.config
@@ -47,9 +47,9 @@ net = Net(x_dim=config.x_dim,
 
 # the usual suspects
 optimizer = optim.Adam(net.parameters(), lr=config.learning_rate, betas=(0.9, 0.999), eps=1e-8,
-                       weight_decay=config.weight_decay, amsgrad=False)
+                       weight_decay=config.weight_decay, amsgrad=True)
 
-criterion = nn.L1Loss()
+criterion = nn.L1Loss(reduction="sum")
 
 sample_fname = "/home/adarsh/software/meam517_final/data_v2/"
 dset = TrajDataset(sample_fname, with_x=config.with_x, max_u=config.u_max)
@@ -66,11 +66,8 @@ for epoch in range(config.epochs):
         input = input.float().cuda()
 
         u1_out = u1_out.float()
-        # print("u1_out", u1_out.shape)
         u2_out = u2_out.float()
-        # print("u2_out", u2_out.shape)
         u3_out = u3_out.float()
-        # print("u3_out", u3_out.shape)
 
         # forward!
         u1_pred, u2_pred, u3_pred = net(input)
