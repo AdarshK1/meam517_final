@@ -31,6 +31,7 @@ hyperparameter_defaults = dict(
 
 dt = datetime.now().strftime("%m_%d_%H_%M")
 name_str = "_split_up_output_1_more_fcn_ONLY_FEASIBLE"
+
 wandb.init(project="517_final", config=hyperparameter_defaults, name=dt + name_str)
 config = wandb.config
 
