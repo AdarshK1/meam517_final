@@ -14,10 +14,10 @@ import os
 
 # eventually we can do sweeps with this setup
 hyperparameter_defaults = dict(
-    batch_size=1130,
-    learning_rate=0.01,
-    weight_decay=0.01,
-    epochs=100,
+    batch_size=721,
+    learning_rate=0.001,
+    weight_decay=0.001,
+    epochs=200,
     test_iters=50,
     num_workers=16,
     with_x=False,
@@ -30,7 +30,7 @@ hyperparameter_defaults = dict(
 )
 
 dt = datetime.now().strftime("%m_%d_%H_%M")
-name_str = "_split_up_output"
+name_str = "_split_up_output_1_more_fcn_ONLY_FEASIBLE"
 wandb.init(project="517_final", config=hyperparameter_defaults, name=dt + name_str)
 config = wandb.config
 

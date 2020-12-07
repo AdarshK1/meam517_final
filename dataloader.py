@@ -2,6 +2,7 @@ import numpy as np
 import glob
 from torch.utils.data import Dataset, DataLoader
 import pickle
+from pydrake.solvers.mathematicalprogram import SolutionResult
 
 
 class TrajDataset(Dataset):
@@ -12,6 +13,18 @@ class TrajDataset(Dataset):
         self.u_max = max_u
 
         self.filenames = glob.glob(self.dir + "*")
+
+        self.only_feasible()
+
+    def only_feasible(self):
+        good_fnames = []
+        for fname in self.filenames:
+            state, output = pickle.load(open(fname, 'rb'))
+
+            if output["result.get_solution_result()"] == SolutionResult.kSolutionFound:
+                good_fnames.append(fname)
+
+        self.filenames = good_fnames
 
     def __len__(self):
         return len(self.filenames)
