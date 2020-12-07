@@ -5,7 +5,7 @@ import pickle
 
 
 class TrajDataset(Dataset):
-    def __init__(self, dir, with_x=True, max_u=75):
+    def __init__(self, dir, with_x=True, max_u=np.array([25, 25, 10])):
         self.dir = dir
         self.with_x = with_x
 
@@ -35,9 +35,14 @@ class TrajDataset(Dataset):
         # print(hmap.shape)
 
         # print("u max", np.max(u_sol, axis=0))
-        u_sol /= self.u_max
-
-        u_sol[abs(u_sol) < 0.001] = 0.0
+        # print(u_sol.shape)
+        # u_sol /= self.u_max
+        # print("post dib u max", np.max(u_sol, axis=0))
+        u1_sol = u_sol[:, 0] / self.u_max[0]
+        u2_sol = u_sol[:, 1] / self.u_max[1]
+        u3_sol = u_sol[:, 2] / self.u_max[2]
+        # u_sol[abs(u_sol) < 0.05] = 0.0
+        # x_sol /= np.max(x_sol)
 
         if self.with_x:
             concatted_sols = np.concatenate([x_sol, u_sol], axis=1).flatten()
@@ -45,7 +50,7 @@ class TrajDataset(Dataset):
             # print(concatted_sols)
             return hmap, concatted_sols
 
-        return hmap, u_sol.flatten()
+        return hmap, u1_sol, u2_sol, u3_sol
 
 
 if __name__ == "__main__":

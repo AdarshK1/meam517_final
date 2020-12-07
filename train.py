@@ -14,23 +14,23 @@ import os
 
 # eventually we can do sweeps with this setup
 hyperparameter_defaults = dict(
-    batch_size=630,
-    learning_rate=0.0001,
-    weight_decay=0.00005,
+    batch_size=1130,
+    learning_rate=0.01,
+    weight_decay=0.01,
     epochs=100,
     test_iters=50,
     num_workers=16,
     with_x=False,
     x_dim=0,
     u_dim=3,
-    fcn_1=1000,
-    fcn_2=1000,
-    fcn_3=500,
-    u_max=75,
+    fcn_1=50,
+    fcn_2=50,
+    fcn_3=50,
+    u_max=np.array([25, 25, 10]),
 )
 
 dt = datetime.now().strftime("%m_%d_%H_%M")
-name_str = "_giant_net"
+name_str = "_split_up_output"
 wandb.init(project="517_final", config=hyperparameter_defaults, name=dt + name_str)
 config = wandb.config
 
@@ -58,26 +58,33 @@ train_loader = DataLoader(dset, batch_size=config.batch_size, num_workers=config
 for epoch in range(config.epochs):
     for i_batch, sample_batched in enumerate(train_loader):
         t1 = time.time()
-        input, output = sample_batched
+        input, u1_out, u2_out, u3_out = sample_batched
 
         optimizer.zero_grad()  # zero the gradient buffers
 
         input = input.float().cuda()
 
-        output = output.float()
+        u1_out = u1_out.float()
+        # print("u1_out", u1_out.shape)
+        u2_out = u2_out.float()
+        # print("u2_out", u2_out.shape)
+        u3_out = u3_out.float()
+        # print("u3_out", u3_out.shape)
 
-        # forward! doesn't use semantic rn but we have it i guess
-        output_predicted = net(input)
+        # forward!
+        u1_pred, u2_pred, u3_pred = net(input)
 
-        loss = criterion(output_predicted.cpu().float(), output)
+        loss = criterion(u1_pred.cpu().float(), u1_out) + \
+               criterion(u2_pred.cpu().float(), u2_out) + \
+               criterion(u3_pred.cpu().float(), u3_out)
 
         wandb.log({'epoch': epoch, 'iteration': i_batch, 'loss': loss.item()})
         print({'epoch': epoch, 'iteration': i_batch, 'loss': loss.item()})
 
-        if i_batch == 0 and epoch % 25 == 0 and epoch > 0:
-            rand_idx = int(np.random.random() * config.batch_size)
-            print("output_gt", output)
-            print("output_pred", output_predicted.cpu().float())
+        # if i_batch == 0 and epoch % 25 == 0 and epoch > 0:
+            # rand_idx = int(np.random.random() * config.batch_size)
+            # print("output_gt", output)
+            # print("output_pred", output_predicted.cpu().float())
 
         # backprop
         loss.backward()

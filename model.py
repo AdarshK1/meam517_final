@@ -15,10 +15,20 @@ class Net(nn.Module):
 
         final_output_dim = nought * (x_dim + u_dim)
 
-        self.fcn_1 = nn.Linear(6 * 9 * 9, fcn_size_1)
-        self.fcn_2 = nn.Linear(fcn_size_1, fcn_size_2)
-        self.fcn_3 = nn.Linear(fcn_size_2, fcn_size_3)
-        self.fcn_4 = nn.Linear(fcn_size_3, final_output_dim)
+        self.fcn_1_u1 = nn.Linear(6 * 9 * 9, fcn_size_1)
+        self.fcn_2_u1 = nn.Linear(fcn_size_1, fcn_size_2)
+        self.fcn_3_u1 = nn.Linear(fcn_size_2, fcn_size_3)
+        self.fcn_4_u1 = nn.Linear(fcn_size_3, nought)
+
+        self.fcn_1_u2 = nn.Linear(6 * 9 * 9, fcn_size_1)
+        self.fcn_2_u2 = nn.Linear(fcn_size_1, fcn_size_2)
+        self.fcn_3_u2 = nn.Linear(fcn_size_2, fcn_size_3)
+        self.fcn_4_u2 = nn.Linear(fcn_size_3, nought)
+
+        self.fcn_1_u3 = nn.Linear(6 * 9 * 9, fcn_size_1)
+        self.fcn_2_u3 = nn.Linear(fcn_size_1, fcn_size_2)
+        self.fcn_3_u3 = nn.Linear(fcn_size_2, fcn_size_3)
+        self.fcn_4_u3 = nn.Linear(fcn_size_3, nought)
 
     def forward(self, map, start=None, apex=None, goal=None):
         map = F.relu((self.conv1(map)))
@@ -32,8 +42,19 @@ class Net(nn.Module):
             out = torch.cat([map, start, apex, goal], dim=1)
             # print(out.shape)
 
-        out = F.relu(self.fcn_1(out))
-        out = F.relu(self.fcn_2(out))
-        out = F.relu(self.fcn_3(out))
-        out = self.fcn_4(out)
-        return out
+        u1_out = F.relu(self.fcn_1_u1(out))
+        u1_out = F.relu(self.fcn_2_u1(u1_out))
+        u1_out = F.relu(self.fcn_3_u1(u1_out))
+        u1_out = self.fcn_4_u1(u1_out)
+
+        u2_out = F.relu(self.fcn_1_u2(out))
+        u2_out = F.relu(self.fcn_2_u2(u2_out))
+        u2_out = F.relu(self.fcn_3_u2(u2_out))
+        u2_out = self.fcn_4_u2(u2_out)
+
+        u3_out = F.relu(self.fcn_1_u3(out))
+        u3_out = F.relu(self.fcn_2_u3(u3_out))
+        u3_out = F.relu(self.fcn_3_u3(u3_out))
+        u3_out = self.fcn_4_u3(u3_out)
+
+        return u1_out, u2_out, u3_out
