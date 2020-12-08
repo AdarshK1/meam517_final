@@ -58,3 +58,32 @@ class Net(nn.Module):
         u3_out = self.fcn_4_u3(u3_out)
 
         return u1_out, u2_out, u3_out
+
+class FeasibilityNet(nn.Module):
+    def __init__(self, fcn_size_1=300, fcn_size_2=400, fcn_size_3=400,  fcn_size_4=400, fcn_size_5=400):
+        super(FeasibilityNet, self).__init__()
+
+        self.conv1 = nn.Conv2d(1, 3, kernel_size=5)
+        self.conv2 = nn.Conv2d(3, 6, kernel_size=3)
+
+        self.fcn_1 = nn.Linear(6 * 9 * 9, fcn_size_1)
+        self.fcn_2 = nn.Linear(fcn_size_1, fcn_size_2)
+        self.fcn_3 = nn.Linear(fcn_size_2, fcn_size_3)
+        self.fcn_4 = nn.Linear(fcn_size_3, fcn_size_4)
+        self.fcn_5 = nn.Linear(fcn_size_4, fcn_size_5)
+        self.fcn_6 = nn.Linear(fcn_size_5, 1)
+
+    def forward(self, map):
+        map = F.relu((self.conv1(map)))
+        map = F.relu((self.conv2(map)))
+
+        out = torch.flatten(map, start_dim=1)
+
+        out = F.relu(self.fcn_1(out))
+        out = F.relu(self.fcn_2(out))
+        out = F.relu(self.fcn_3(out))
+        out = F.relu(self.fcn_4(out))
+        out = F.relu(self.fcn_5(out))
+        out = F.sigmoid(self.fcn_6(out))
+
+        return out

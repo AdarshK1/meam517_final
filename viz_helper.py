@@ -1,6 +1,8 @@
 from import_helper import *
 from matplotlib import pyplot as plt
-
+from obstacles import Obstacles
+from helper import *
+from constraints import *
 
 def build_viz_plant():
     """
