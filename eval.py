@@ -43,16 +43,27 @@ parser.add_argument("--data_path", help="Data object", default="/home/adarsh/sof
 
 args = parser.parse_args()
 
-net = Net(x_dim=0,
+net = Net(x_dim=3,
           u_dim=3,
           fcn_size_1=250,
           fcn_size_2=120,
-          fcn_size_3=50).cuda().float()
+          fcn_size_3=50,
+          fcn_size_4=75,
+          ).cuda().float()
 
 net.load_state_dict(torch.load(args.net_path))
 
 sample_fname = "/home/adarsh/software/meam517_final/data_v2/"
-dset = TrajDataset(sample_fname, with_x=False, max_u=np.array([25, 25, 10]))
+# dset = TrajDataset(sample_fname, with_x=False, max_u=np.array([25, 25, 10]))
+
+dset = TrajDataset(sample_fname,
+                   with_x=False,
+                   max_u=np.array([25, 25, 10]),
+                   x_dim=3,
+                   with_u=False,
+                   u_dim=3,
+                   toe_xyz=True,
+                   toe_scale=np.array([0.6, 0.3, 0.1]))
 
 criterion = nn.L1Loss()
 

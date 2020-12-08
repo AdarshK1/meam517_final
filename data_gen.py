@@ -46,11 +46,11 @@ def randomize_state(initial, apex, final, angle_std=0.25, vel_std=0.5):
 
 def call_find_trajectory(args):
     solved = multi_step_solve(args["N"],
-                                args["initial_state"],
-                                args["final_state"],
-                                args["apex_state"],
-                                args["tf"],
-                                obstacles=args["obstacles"])
+                              args["initial_state"],
+                              args["final_state"],
+                              args["apex_state"],
+                              args["tf"],
+                              obstacles=args["obstacles"])
 
     # can't pickle trajectories
     solved.pop('x_traj', None)
@@ -67,8 +67,8 @@ def call_find_trajectory(args):
 
 if __name__ == '__main__':
 
-    n_threads = 60
-    n_outputs = 1000
+    n_threads = 64
+    n_outputs = 10000
 
     overall_counter = 0
     data_dir = "data_v2/"

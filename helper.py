@@ -81,7 +81,7 @@ def get_world_position(context, single_leg, plant, plant_context, frame_name, x)
 
     # Do forward kinematics.
     frame_xyz = plant_eval.CalcRelativeTransform(context_eval, resolve_frame(plant_eval, world_frame),
-                                               resolve_frame(plant_eval, base_frame))
+                                                 resolve_frame(plant_eval, base_frame))
 
     return frame_xyz.translation()
 

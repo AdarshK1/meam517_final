@@ -5,7 +5,8 @@ import torch.optim as optim
 
 
 class Net(nn.Module):
-    def __init__(self, nought=35, x_dim=6, u_dim=3, fcn_size_1=300, fcn_size_2=400, fcn_size_3=400, fcn_size_4=400, with_pose=False):
+    def __init__(self, nought=35, x_dim=6, u_dim=3, fcn_size_1=300, fcn_size_2=400, fcn_size_3=400, fcn_size_4=400,
+                 with_pose=False):
         super(Net, self).__init__()
 
         self.with_pose = with_pose
@@ -69,8 +70,9 @@ class Net(nn.Module):
 
         return u1_out, u2_out, u3_out
 
+
 class FeasibilityNet(nn.Module):
-    def __init__(self, fcn_size_1=300, fcn_size_2=400, fcn_size_3=400,  fcn_size_4=400, fcn_size_5=400):
+    def __init__(self, fcn_size_1=300, fcn_size_2=400, fcn_size_3=400, fcn_size_4=400, fcn_size_5=400):
         super(FeasibilityNet, self).__init__()
 
         self.conv1 = nn.Conv2d(1, 3, kernel_size=5)

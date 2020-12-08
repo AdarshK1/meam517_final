@@ -4,11 +4,14 @@ import importlib
 
 from pydrake.solvers.mathematicalprogram import MathematicalProgram, Solve
 from pydrake.systems.framework import DiagramBuilder
-from pydrake.systems.analysis import Simulator
+from pydrake.systems.analysis import Simulator, SimulatorStatus
+from pydrake.solvers.mathematicalprogram import SolutionResult
 
-from pydrake.all import (
-    DiagramBuilder, Simulator, SolutionResult
-)
+# from pydrake.all import (
+#     DiagramBuilder,
+#     Simulator,
+#     SolutionResult
+# )
 
 from pydrake.multibody.tree import (
     JointActuatorIndex
@@ -26,10 +29,12 @@ from pydrake.systems.framework import DiagramBuilder
 from pydrake.systems.analysis import Simulator
 from pydrake.systems.drawing import plot_system_graphviz
 
-from pydrake.all import (
-    ConnectMeshcatVisualizer, DiagramBuilder,
-    Simulator, SimulatorStatus
-)
+# from pydrake.all import (
+#     # ConnectMeshcatVisualizer,
+#     DiagramBuilder,
+#     Simulator,
+#     SimulatorStatus
+# )
 
 from pydrake.geometry import (
     SceneGraph, ConnectDrakeVisualizer
@@ -47,9 +52,9 @@ from pydrake.systems.primitives import (
 
 import argparse
 
-import meshcat
-import meshcat.geometry as geom
-import meshcat.transformations as tforms
+# import meshcat
+# import meshcat.geometry as geom
+# import meshcat.transformations as tforms
 
 # from obstacles import Obstacles
 # from viz_helper import *
