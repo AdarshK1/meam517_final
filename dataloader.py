@@ -70,10 +70,13 @@ class TrajDataset(Dataset):
             # print(concatted_sols)
             return hmap, concatted_sols
         elif self.with_x:
-            print(x_sol.shape)
+            # print(x_sol.shape)
             x_sol = x_sol[:, :self.x_dim]
             x_sol /= 3.14
-            return hmap, x_sol
+            x1_sol = x_sol[:, 0]
+            x2_sol = x_sol[:, 1]
+            x3_sol = x_sol[:, 2]
+            return hmap, x1_sol, x2_sol, x3_sol
 
         return hmap, u1_sol, u2_sol, u3_sol
 
