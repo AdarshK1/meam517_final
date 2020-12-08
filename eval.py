@@ -21,15 +21,15 @@ def gen_plots(input, preds, gts, u_max=np.array([25, 25, 10])):
     fig, axs = plt.subplots(4)
     axs[0].plot(u1_gt)
     axs[0].plot(u1_pred)
-    axs[0].legend(["u1_gt", "u1_pred"])
+    axs[0].legend(["x_gt", "x_pred"])
 
     axs[1].plot(u2_gt)
     axs[1].plot(u2_pred)
-    axs[1].legend(["u2_gt", "u2_pred"])
+    axs[1].legend(["y_gt", "y_pred"])
 
     axs[2].plot(u3_gt)
     axs[2].plot(u3_pred)
-    axs[2].legend(["u3_gt", "u3_pred"])
+    axs[2].legend(["z_gt", "z_pred"])
 
     axs[3].imshow(input)
 
@@ -63,7 +63,7 @@ dset = TrajDataset(sample_fname,
                    with_u=False,
                    u_dim=3,
                    toe_xyz=True,
-                   toe_scale=np.array([0.6, 0.3, 0.1]))
+                   toe_scale=np.array([0.6, 0.4, 0.3]))
 
 criterion = nn.L1Loss()
 

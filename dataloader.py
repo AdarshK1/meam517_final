@@ -74,10 +74,6 @@ class TrajDataset(Dataset):
         x_sol = output["x_sol"]
         u_sol = output["u_sol"]
 
-        u1_sol = u_sol[:, 0] / self.u_max[0]
-        u2_sol = u_sol[:, 1] / self.u_max[1]
-        u3_sol = u_sol[:, 2] / self.u_max[2]
-
         if self.with_x and self.with_u:
             concatted_sols = np.concatenate([x_sol, u_sol], axis=1).flatten()
             return hmap, concatted_sols
@@ -89,33 +85,37 @@ class TrajDataset(Dataset):
             x3_sol = x_sol[:, 2]
             return hmap, x1_sol, x2_sol, x3_sol
         elif self.toe_xyz:
-            xx_sol = []
-            y_sol = []
-            z_sol = []
-            # print(x_sol.shape)
-            for i in range(x_sol.shape[0]):
-                name2ang = {"body_hip": x_sol[i, 0],
-                            "hip_upper": x_sol[i, 1],
-                            "upper_lower": x_sol[i, 2]}
-                context = create_context_from_angles(self.plant, name2ang)
+            # xx_sol = []
+            # y_sol = []
+            # z_sol = []
+            # # print(x_sol.shape)
+            # for i in range(x_sol.shape[0]):
+            #     name2ang = {"body_hip": x_sol[i, 0],
+            #                 "hip_upper": x_sol[i, 1],
+            #                 "upper_lower": x_sol[i, 2]}
+            #     context = create_context_from_angles(self.plant, name2ang)
+            #
+            #     # trans = get_world_position(context, self.single_leg, self.plant, self.plant_context, "toe0", None)
+            #     trans = self.plant.CalcRelativeTransform(context,
+            #                                              resolve_frame(self.plant, self.plant.world_frame()),
+            #                                              resolve_frame(self.plant, self.plant.GetFrameByName("toe0"))).translation()
+            #     # print("Trans", trans)
+            #
+            #     xx_sol.append(trans[0] / self.toe_scale[0])
+            #     y_sol.append(trans[1] / self.toe_scale[1])
+            #     z_sol.append(trans[2] / self.toe_scale[2])
 
-                # trans = get_world_position(context, self.single_leg, self.plant, self.plant_context, "toe0", None)
-                trans = self.plant.CalcRelativeTransform(context,
-                                                         resolve_frame(self.plant, self.plant.world_frame()),
-                                                         resolve_frame(self.plant, self.plant.GetFrameByName("toe0"))).translation()
-                # print("Trans", trans)
-
-                xx_sol.append(trans[0] / self.toe_scale[0])
-                y_sol.append(trans[1] / self.toe_scale[1])
-                z_sol.append(trans[2] / self.toe_scale[2])
-
-            xx_sol = np.array(xx_sol)
-            y_sol = np.array(y_sol)
-            z_sol = np.array(z_sol)
-            print(xx_sol)
-            print(y_sol)
-            print(z_sol)
+            xx_sol = output["toe_x_sol"] / self.toe_scale[0]
+            y_sol = output["toe_y_sol"] / self.toe_scale[1]
+            z_sol = output["toe_z_sol"] / self.toe_scale[2]
+            # print(xx_sol)
+            # print(y_sol)
+            # print(z_sol)
             return hmap, xx_sol, y_sol, z_sol
+
+        u1_sol = u_sol[:, 0] / self.u_max[0]
+        u2_sol = u_sol[:, 1] / self.u_max[1]
+        u3_sol = u_sol[:, 2] / self.u_max[2]
 
         return hmap, u1_sol, u2_sol, u3_sol
 

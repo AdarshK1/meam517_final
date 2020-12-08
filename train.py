@@ -189,6 +189,18 @@ def train_x_net():
             t2 = time.time()
 
 
+def grad_weighted_l1(target, output, weight=10):
+    grad_target = target[:, 1:] - target[:, :-1]
+
+    grad_targ_padded = torch.ones(target.shape[0], target.shape[1])
+    grad_targ_padded[:, :grad_target.shape[1]] = grad_target
+
+    grad_targ_padded = torch.abs(grad_targ_padded)
+
+    loss = torch.mean(grad_targ_padded * weight * torch.abs(target - output))
+
+    return loss
+
 def train_toe_net():
     # eventually we can do sweeps with this setup
     hyperparameter_defaults = dict(
@@ -207,12 +219,13 @@ def train_toe_net():
         fcn_3=50,
         fcn_4=75,
         u_max=np.array([25, 25, 10]),
-        toe_scale=np.array([0.6, 0.3, 0.1]),
-        toe_xyz=True
+        toe_scale=np.array([0.6, 0.4, 0.3]),
+        toe_xyz=True,
+        grad_weight=15,
     )
 
     dt = datetime.now().strftime("%m_%d_%H_%M")
-    name_str = "_toe_net_crossovers"
+    name_str = "_toe_net_grad_weighted_l1"
 
     wandb.init(project="517_final", config=hyperparameter_defaults, name=dt + name_str)
     config = wandb.config
@@ -232,9 +245,10 @@ def train_toe_net():
     optimizer = optim.Adam(net.parameters(), lr=config.learning_rate, betas=(0.9, 0.999), eps=1e-8,
                            weight_decay=config.weight_decay, amsgrad=False)
 
-    criterion = nn.L1Loss()
+    # criterion = nn.L1Loss()
+    criterion = grad_weighted_l1
 
-    sample_fname = "/home/adarsh/software/meam517_final/data_v2/"
+    sample_fname = "/home/adarsh/software/meam517_final/data_v3/"
     dset = TrajDataset(sample_fname,
                        with_x=config.with_x,
                        max_u=config.u_max,
@@ -262,11 +276,14 @@ def train_toe_net():
             # forward!
             x_pred, y_pred, z_pred = net(input)
 
-            loss = criterion(x_pred.cpu().float(), x_out) + \
-                   criterion(y_pred.cpu().float(), y_out) + \
-                   criterion(z_pred.cpu().float(), z_out)
+            x_err = criterion(x_pred.cpu().float(), x_out, config.grad_weight)
+            y_err = criterion(y_pred.cpu().float(), y_out, config.grad_weight)
+            z_err = criterion(z_pred.cpu().float(), z_out, config.grad_weight)
+
+            loss = x_err + y_err + z_err
 
             wandb.log({'epoch': epoch, 'iteration': i_batch, 'loss': loss.item()})
+            wandb.log({'x_err': x_err.item(), 'y_err': y_err.item(), 'z_err': z_err.item()})
             print({'epoch': epoch, 'iteration': i_batch, 'loss': loss.item()})
 
             # if i_batch == 0 and epoch % 25 == 0 and epoch > 0:

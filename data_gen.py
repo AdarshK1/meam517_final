@@ -61,13 +61,15 @@ def call_find_trajectory(args):
     path = data_dir + "{}.pkl"
 
     # dump
-    pickle.dump((args, solved), open(path.format(dt), 'wb'))
+    open_file = open(path.format(dt), 'wb')
+    pickle.dump((args, solved), open_file)
+    open_file.close()
     return solved
 
 
 if __name__ == '__main__':
 
-    n_threads = 64
+    n_threads = 48
     n_outputs = 10000
 
     overall_counter = 0
