@@ -161,6 +161,20 @@ def multi_step_solve(N, initial_state, final_state, apex_state, tf, obstacles=No
         t4 = time.time()
         print("Time to solve: " + str(round(t4 - t3, 2)), "for ", knot_num)
 
+    # Save coefficients for u trajectory
+    u1_coef = np.zeros((N-1, 2))    # num segments x order of polynomial
+    u2_coef = np.zeros((N-1, 2))
+    u3_coef = np.zeros((N-1, 2))
+
+    for i in range(N-1):
+        poly_mat = u_traj.getPolynomialMatrix(i)
+
+        u1_coef[i, :] = poly_mat[0][0].GetCoefficients()
+        u2_coef[i, :] = poly_mat[1][0].GetCoefficients()
+        u3_coef[i, :] = poly_mat[2][0].GetCoefficients()
+
+    # print(u1_coef)
+
     out_dict = {"result.get_solution_result()": result.get_solution_result(),
                 "x_sol": x_sol,
                 "x_traj": x_traj,
@@ -168,7 +182,10 @@ def multi_step_solve(N, initial_state, final_state, apex_state, tf, obstacles=No
                 "u_traj": u_traj,
                 "xdot_sol": xdot_sol,
                 "timesteps": timesteps,
-                "obstacles": obstacles}
+                "obstacles": obstacles,
+                "u1_coef": u1_coef,
+                "u2_coef": u2_coef,
+                "u3_coef": u3_coef}
     return out_dict
 
 

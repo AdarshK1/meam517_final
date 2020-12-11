@@ -13,7 +13,7 @@ from helper import get_plant, resolve_frame, create_context_from_angles
 
 class TrajDataset(Dataset):
     def __init__(self, dir, x_dim=3, with_u=True, u_dim=3, with_x=True, max_u=np.array([25, 25, 10]),
-                 keep_only_feasible=True, feasibility_classifier=False, toe_xyz=False, toe_scale=np.array([0.6, 0.3, 0.1])):
+                 keep_only_feasible=True, feasibility_classifier=False, toe_xyz=False, toe_scale=np.array([0.6, 0.3, 0.1]), u_coef_classifier=False):
         self.dir = dir
         self.with_x = with_x
 
@@ -28,6 +28,8 @@ class TrajDataset(Dataset):
 
         self.keep_only_feasible = keep_only_feasible
         self.feasibility_classifier = feasibility_classifier
+
+        self.u_coef_classifier = u_coef_classifier
 
         if self.keep_only_feasible and not self.feasibility_classifier:
             self.only_feasible()
@@ -70,6 +72,13 @@ class TrajDataset(Dataset):
             else:
                 feas = np.array([0])
             return hmap, feas
+
+        if self.u_coef_classifier:
+            u1 = output["u1_coef"].flatten()    # Total dimension should be 2(N-1)
+            u2 = output["u2_coef"].flatten()
+            u3 = output["u3_coef"].flatten()
+
+            return hmap, u1, u2, u3
 
         x_sol = output["x_sol"]
         u_sol = output["u_sol"]
@@ -122,10 +131,11 @@ class TrajDataset(Dataset):
 
 if __name__ == "__main__":
     N = 1
-    sample_fname = "/home/adarsh/software/meam517_final/data_v2/"
+    # sample_fname = "/home/adarsh/software/meam517_final/data_v2/"
+    sample_fname = "/home/austin/repos/meam517_final/data_v3/"
     # dset = TrajDataset(sample_fname, x_dim=3, with_u=False, u_dim=3, with_x=True)
-    dset = TrajDataset(sample_fname, x_dim=3, with_u=False, u_dim=3, with_x=False, toe_xyz=True)
+    dset = TrajDataset(sample_fname, u_coef_classifier=True)
     print(len(dset))
     for i in range(N):
         vals = dset.__getitem__(i)
-        # print(vals)
+        print(vals)

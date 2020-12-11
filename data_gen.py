@@ -69,11 +69,11 @@ def call_find_trajectory(args):
 
 if __name__ == '__main__':
 
-    n_threads = 48
-    n_outputs = 10000
+    n_threads = 12
+    n_outputs = 1000
 
     overall_counter = 0
-    data_dir = "data_v2/"
+    data_dir = "data_v3/"
 
     # print("FIX THE NOUGHTS")
     N = 35

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 import wandb
-from model import Net, FeasibilityNet
+from model import Net, FeasibilityNet, CoefNet
 from dataloader import TrajDataset
 from torch.utils.data import DataLoader
 import time
@@ -375,8 +375,82 @@ def train_feasibility_classifier():
             t2 = time.time()
 
 
+def train_u_coefs():
+    # eventually we can do sweeps with this setup
+    hyperparameter_defaults = dict(
+        batch_size=10,
+        learning_rate=0.001,
+        weight_decay=0.001,
+        epochs=1000,
+        test_iters=50,
+        num_workers=16,
+        with_x=False,
+        x_dim=0,
+        u_dim=3,
+        fcn_1=250,
+        fcn_2=120,
+        fcn_3=60,
+        fcn_4=30,
+        fcn_5=10,
+        u_max=np.array([25, 25, 10])
+    )
+
+    dt = datetime.now().strftime("%m_%d_%H_%M")
+    name_str = "_u_coef"
+
+    wandb.init(project="517_final", group="u_coef", config=hyperparameter_defaults, name=dt + name_str)
+    config = wandb.config
+
+    backup_dir = "models/" + dt + name_str
+
+    os.makedirs(backup_dir, exist_ok=True)
+
+    net = CoefNet().cuda().float()
+
+    # the usual suspects
+    optimizer = optim.Adam(net.parameters(), lr=config.learning_rate, betas=(0.9, 0.999), eps=1e-8,
+                           weight_decay=config.weight_decay, amsgrad=False)
+
+    criterion = nn.MSELoss()
+
+    sample_fname = "/home/austin/repos/meam517_final/data_v3/"
+    dset = TrajDataset(sample_fname, u_coef_classifier=True)
+
+    train_loader = DataLoader(dset, batch_size=config.batch_size, num_workers=config.num_workers, shuffle=True)
+    for epoch in range(config.epochs):
+        for i_batch, sample_batched in enumerate(train_loader):
+            t1 = time.time()
+            input, u1_coef, u2_coef, u3_coef = sample_batched
+
+            optimizer.zero_grad()  # zero the gradient buffers
+
+            input = input.float().cuda()
+
+            # forward!
+            u1_pred, u2_pred, u3_pred = net(input)
+
+
+            loss = criterion(u1_pred.cpu().float(), u1_coef.float()) + \
+                   criterion(u2_pred.cpu().float(), u2_coef.float()) + \
+                   criterion(u3_pred.cpu().float(), u3_coef.float())
+
+
+            wandb.log({'epoch': epoch, 'iteration': i_batch, 'loss': loss.item()})
+            print({'epoch': epoch, 'iteration': i_batch, 'loss': loss.item()})
+
+            # backprop
+            loss.backward()
+            optimizer.step()  # Does the update
+
+            backup_path = backup_dir + "/model.ckpt"
+
+            torch.save(net.state_dict(), backup_path)
+            t2 = time.time()
+
+
 if __name__ == "__main__":
     # train_u_net()
     # train_x_net()
-    train_toe_net()
+    # train_toe_net()
     # train_feasibility_classifier()
+    train_u_coefs()
