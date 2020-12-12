@@ -7,9 +7,26 @@ from torch.utils.data import DataLoader
 import time
 import argparse
 import matplotlib.pyplot as plt
+import cv2
 
 
-def gen_plots(input, preds, gts, u_max=np.array([25, 25, 10])):
+def grad_weighted_l1(output, target, weight=10, min=0.5, max=100):
+    grad_target = target[:, 1:] - target[:, :-1]
+
+    grad_targ_padded = torch.ones(target.shape[0], target.shape[1])
+    grad_targ_padded[:, :grad_target.shape[1]] = grad_target
+
+    # grad_targ_padded = torch.clamp(torch.abs(grad_targ_padded) * weight, min, max)
+    # grad_targ_padded = torch.abs(grad_targ_padded) * weight
+    print(grad_targ_padded)
+    print(torch.abs(target - output))
+
+    loss = torch.mean(torch.abs(grad_targ_padded) * weight * torch.abs(target - output))
+
+    return loss
+
+
+def gen_plots(input, preds, gts, pltshow=True):
     input = input[0, 0, :, :].cpu()
     u1_gt = gts[0][0, :]
     u1_pred = preds[0][0, :].cpu().detach().numpy()
@@ -33,62 +50,69 @@ def gen_plots(input, preds, gts, u_max=np.array([25, 25, 10])):
 
     axs[3].imshow(input)
 
-    plt.show()
-    time.sleep(1)
+    if pltshow:
+        plt.show()
+        time.sleep(1)
+    else:
+        fig.savefig("tmp.png")
+        img = cv2.imread("tmp.png")
+        return img
 
 
-parser = argparse.ArgumentParser(description="")
-parser.add_argument("--net_path", help="Net checkpoint", required=True)
-parser.add_argument("--data_path", help="Data object", default="/home/adarsh/software/meam517_final/data_v2/")
+if __name__ == "__main__":
 
-args = parser.parse_args()
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument("--net_path", help="Net checkpoint", required=True)
+    parser.add_argument("--data_path", help="Data object", default="/home/adarsh/software/meam517_final/data_v2/")
 
-net = Net(x_dim=3,
-          u_dim=3,
-          fcn_size_1=250,
-          fcn_size_2=120,
-          fcn_size_3=50,
-          fcn_size_4=75,
-          ).cuda().float()
+    args = parser.parse_args()
 
-net.load_state_dict(torch.load(args.net_path))
+    net = Net(x_dim=3,
+              u_dim=3,
+              fcn_size_1=250,
+              fcn_size_2=120,
+              fcn_size_3=50,
+              fcn_size_4=75,
+              ).cuda().float()
 
-sample_fname = "/home/adarsh/software/meam517_final/data_v2/"
-# dset = TrajDataset(sample_fname, with_x=False, max_u=np.array([25, 25, 10]))
+    net.load_state_dict(torch.load(args.net_path))
 
-dset = TrajDataset(sample_fname,
-                   with_x=False,
-                   max_u=np.array([25, 25, 10]),
-                   x_dim=3,
-                   with_u=False,
-                   u_dim=3,
-                   toe_xyz=True,
-                   toe_scale=np.array([0.6, 0.4, 0.3]))
+    sample_fname = "/home/adarsh/software/meam517_final/data_v3/"
+    # dset = TrajDataset(sample_fname, with_x=False, max_u=np.array([25, 25, 10]))
 
-criterion = nn.L1Loss()
+    dset = TrajDataset(sample_fname,
+                       with_x=False,
+                       max_u=np.array([25, 25, 10]),
+                       x_dim=3,
+                       with_u=False,
+                       u_dim=3,
+                       toe_xyz=True,
+                       toe_scale=np.array([0.7, 0.5, 0.3]))
 
-test_loader = DataLoader(dset, batch_size=1, num_workers=1, shuffle=True)
+    criterion = grad_weighted_l1
 
-num_tests = 10
+    test_loader = DataLoader(dset, batch_size=1, num_workers=1, shuffle=True)
 
-for i_batch, sample_batched in enumerate(test_loader):
-    if i_batch == num_tests:
-        break
-    input, u1_out, u2_out, u3_out = sample_batched
+    num_tests = 10
 
-    input = input.float().cuda()
+    for i_batch, sample_batched in enumerate(test_loader):
+        if i_batch == num_tests:
+            break
+        input, u1_out, u2_out, u3_out = sample_batched
 
-    u1_out = u1_out.float()
-    u2_out = u2_out.float()
-    u3_out = u3_out.float()
+        input = input.float().cuda()
 
-    # forward!
-    u1_pred, u2_pred, u3_pred = net(input)
+        u1_out = u1_out.float()
+        u2_out = u2_out.float()
+        u3_out = u3_out.float()
 
-    loss = criterion(u1_pred.cpu().float(), u1_out) + \
-           criterion(u2_pred.cpu().float(), u2_out) + \
-           criterion(u3_pred.cpu().float(), u3_out)
+        # forward!
+        u1_pred, u2_pred, u3_pred = net(input)
 
-    print({'iteration': i_batch, 'loss': loss.item()})
+        loss = criterion(u1_pred.cpu().float(), u1_out, 15) + \
+               criterion(u2_pred.cpu().float(), u2_out, 15) + \
+               criterion(u3_pred.cpu().float(), u3_out, 15)
 
-    gen_plots(input, [u1_pred, u2_pred, u3_pred], [u1_out, u2_out, u3_out])
+        print({'iteration': i_batch, 'loss': loss.item()})
+
+        gen_plots(input, [u1_pred, u2_pred, u3_pred], [u1_out, u2_out, u3_out])
