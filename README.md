@@ -2,6 +2,8 @@
 
 This work was originally a final project for myself and [@aukchen](https://github.com/aukchen) as part of Meam 517: Controls and Optimization for Robotics at Penn, taught by Professor Michael Posa.
 
+Weights and Biases Report [here](https://wandb.ai/akulkarni/517_final/reports/Meam-517-Trial-Comparison--VmlldzozNjM0Mzc). 
+
 ![](readme_img/random_env.png)
 
 This is an offline, nonlinear trajectory optimization that can output a collision-free spline (when possible) for a 3-DOF
