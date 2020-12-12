@@ -4,7 +4,7 @@ This work was originally a final project for myself and [@aukchen](https://githu
 
 Weights and Biases Report [here](https://wandb.ai/akulkarni/517_final/reports/Meam-517-Trial-Comparison--VmlldzozNjM0Mzc). 
 
-![](readme_img/random_env.png)
+![](readme_img/cropped_random_env.png)
 
 This is an offline, nonlinear trajectory optimization that can output a collision-free spline (when possible) for a 3-DOF
 quadrped leg, here using the Ghost Robotics Vision 60 as a model). We use the offline trajectory, which takes between
