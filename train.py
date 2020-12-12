@@ -11,6 +11,8 @@ import time
 import sys
 from datetime import datetime
 import os
+from eval import gen_plots
+import cv2
 
 
 def train_u_net():
@@ -189,15 +191,20 @@ def train_x_net():
             t2 = time.time()
 
 
-def grad_weighted_l1(target, output, weight=10):
+def grad_weighted_l1(output, target, weight=10, min=0.5, max=100):
     grad_target = target[:, 1:] - target[:, :-1]
 
     grad_targ_padded = torch.ones(target.shape[0], target.shape[1])
-    grad_targ_padded[:, :grad_target.shape[1]] = grad_target
+    # grad_targ_padded[:, :grad_target.shape[1]] = grad_target
+    grad_targ_padded[:, 1:] = grad_target
 
-    grad_targ_padded = torch.abs(grad_targ_padded)
+    # print("torch", torch.abs(grad_targ_padded) * weight)
+    grad_targ_padded = torch.clamp(torch.abs(grad_targ_padded) * weight, min, max)
+    # print("grad_targ_padded", grad_targ_padded)
 
-    loss = torch.mean(grad_targ_padded * weight * torch.abs(target - output))
+    # print("torch", torch.abs(target - output))
+
+    loss = torch.mean(torch.abs(grad_targ_padded) * torch.abs(target - output))
 
     return loss
 
@@ -219,13 +226,15 @@ def train_toe_net():
         fcn_3=50,
         fcn_4=75,
         u_max=np.array([25, 25, 10]),
-        toe_scale=np.array([0.6, 0.4, 0.3]),
+        toe_scale=np.array([0.7, 0.5, 0.4]),
         toe_xyz=True,
         grad_weight=15,
+        grad_min=0.1,
+        grad_max=100,
     )
 
     dt = datetime.now().strftime("%m_%d_%H_%M")
-    name_str = "_toe_net_grad_weighted_l1"
+    name_str = "_toe_net_clamped_fixed!!"
 
     wandb.init(project="517_final", config=hyperparameter_defaults, name=dt + name_str)
     config = wandb.config
@@ -276,9 +285,9 @@ def train_toe_net():
             # forward!
             x_pred, y_pred, z_pred = net(input)
 
-            x_err = criterion(x_pred.cpu().float(), x_out, config.grad_weight)
-            y_err = criterion(y_pred.cpu().float(), y_out, config.grad_weight)
-            z_err = criterion(z_pred.cpu().float(), z_out, config.grad_weight)
+            x_err = criterion(x_pred.cpu().float(), x_out, config.grad_weight, config.grad_min, config.grad_max)
+            y_err = criterion(y_pred.cpu().float(), y_out, config.grad_weight, config.grad_min, config.grad_max)
+            z_err = criterion(z_pred.cpu().float(), z_out, config.grad_weight, config.grad_min, config.grad_max)
 
             loss = x_err + y_err + z_err
 
@@ -286,10 +295,13 @@ def train_toe_net():
             wandb.log({'x_err': x_err.item(), 'y_err': y_err.item(), 'z_err': z_err.item()})
             print({'epoch': epoch, 'iteration': i_batch, 'loss': loss.item()})
 
-            # if i_batch == 0 and epoch % 25 == 0 and epoch > 0:
-            #     rand_idx = int(np.random.random() * config.batch_size)
-            #     print("output_gt", output)
-            #     print("output_pred", output_predicted.cpu().float())
+            if i_batch == 0 and epoch % 10 == 0 and epoch > 0:
+                pl = gen_plots(input,
+                               [x_pred, y_pred, z_pred],
+                               [x_out, y_out, z_out], pltshow=False)
+                os.makedirs("imgs/" + dt + name_str, exist_ok=True)
+                cv2.imwrite("imgs/" + dt + name_str + ("/img_{}.png").format(epoch), pl)
+                wandb.log({"eval_plot": [wandb.Image(pl)]})
 
             # backprop
             loss.backward()
