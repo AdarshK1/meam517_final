@@ -14,6 +14,8 @@ top down heightmap as the environment representation, and parameterizes large ob
 
 Full credit given to the Ghost Robotics Description repository [here](https://gitlab.com/ghostrobotics/ghost_description/). The drake friendly URDF and meshes for visualization where adapted from there. No control or perception software from Ghost Robotics is used in this work.
 
+For more technical depth, take a look at the pdf in this repo.
+
 ### Nonlinear Optimization
 
 We formulate the trajectory optimization as a nonlinear direct collocation for the pyDrake SNoPT solver. We formulate constraints
