@@ -224,7 +224,8 @@ class Obstacles:
                 link_end_dist = np.linalg.norm(self.obs_xyz - second_link_xyz.translation())
                 link_origin_dist = np.linalg.norm(self.obs_xyz - link_xyz.translation())
 
-                distance = np.linalg.norm(link_end_dist)
+                distance = np.linalg.norm(obst_dist)
+
                 if link_origin_dist < distance:
                     distance = link_origin_dist
                 if link_end_dist < distance:
