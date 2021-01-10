@@ -4,6 +4,10 @@ from obstacles import Obstacles
 from helper import *
 from constraints import *
 
+from pydrake.geometry import (
+    SceneGraph, ConnectDrakeVisualizer
+)
+
 def build_viz_plant():
     """
 

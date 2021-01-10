@@ -30,15 +30,16 @@ from pydrake.systems.analysis import Simulator
 from pydrake.systems.drawing import plot_system_graphviz
 
 # from pydrake.all import (
-#     # ConnectMeshcatVisualizer,
-#     DiagramBuilder,
-#     Simulator,
-#     SimulatorStatus
+#     ConnectMeshcatVisualizer,
+#     # DiagramBuilder,
+# #     Simulator,
+# #     SimulatorStatus
 # )
 
 from pydrake.geometry import (
     SceneGraph, ConnectDrakeVisualizer
 )
+from pydrake.systems.meshcat_visualizer import ConnectMeshcatVisualizer
 
 from pydrake.common import FindResourceOrThrow
 from pydrake.multibody.plant import MultibodyPlant
@@ -52,9 +53,9 @@ from pydrake.systems.primitives import (
 
 import argparse
 
-# import meshcat
-# import meshcat.geometry as geom
-# import meshcat.transformations as tforms
+import meshcat
+import meshcat.geometry as geom
+import meshcat.transformations as tforms
 
 # from obstacles import Obstacles
 # from viz_helper import *

@@ -217,16 +217,28 @@ class Obstacles:
                 # vector going from link to obstacle
                 link_to_obst_vect = self.obs_xyz - link_xyz.translation()
 
-                obst_dist = link_to_obst_vect - (link_unit_vect * link_to_obst_vect.dot(link_unit_vect))
+                projection = (link_unit_vect * link_to_obst_vect.dot(link_unit_vect))
+
+                obst_dist = link_to_obst_vect - projection
+
+                link_end_dist = np.linalg.norm(self.obs_xyz - second_link_xyz.translation())
+                link_origin_dist = np.linalg.norm(self.obs_xyz - link_xyz.translation())
+
+                distance = np.linalg.norm(link_end_dist)
+                if link_origin_dist < distance:
+                    distance = link_origin_dist
+                if link_end_dist < distance:
+                    distance = link_end_dist
                 # print("link_vect", link_vect)
                 # print("link_to_obst_vect", link_to_obst_vect)
                 # print("link_to_obst_vect.dot(link_unit_vect)", link_to_obst_vect.dot(link_unit_vect))
                 # print("projection", (link_vect * (link_unit_vect * link_to_obst_vect.dot(link_unit_vect))))
                 # print("obst_dist", obst_dist)
-                distance = np.linalg.norm(obst_dist)
+                # print("\n")
 
                 # print("link constraint", self.frame.name(), self.second_frame.name(), distance)
                 # print()
+                # print(distance)
                 return [distance]
 
             def resolve_frame(self, plant, F):
@@ -238,8 +250,8 @@ class Obstacles:
                 for j, frame in enumerate(frames):
                     distance_functor = Obstacle_Distance(obs_xyz, frame, multi_constraint=self.multi_constraint)
 
-                    prog.AddConstraint(distance_functor,
-                                       lb=[radius + frame_radii[frame.name()]], ub=[float('inf')], vars=x[i])
+                    # prog.AddConstraint(distance_functor,
+                    #                    lb=[radius + frame_radii[frame.name()]], ub=[float('inf')], vars=x[i])
 
                     if second_frame_names[j] is not None:
                         distance_functor = Obstacle_Distance(obs_xyz, frame, multi_constraint=self.multi_constraint,

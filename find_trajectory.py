@@ -7,6 +7,9 @@ from obstacles import Obstacles
 from viz_helper import *
 from helper import *
 from constraints import *
+from pydrake.geometry import (
+    SceneGraph, ConnectDrakeVisualizer
+)
 
 warnings.simplefilter("ignore", DrakeDeprecationWarning)
 
@@ -228,13 +231,14 @@ if __name__ == '__main__':
     # Initialize obstacles
     obstacles = None
     if args.obstacles:
+        print("made obstacles")
         obstacles = Obstacles(N=int(args.n_obst), multi_constraint=True)
 
     # final_state = initial_state
     tf = 2.0
 
     t1 = time.time()
-    out_dict = multi_step_solve(N, initial_state, final_state, apex_state, tf)
+    out_dict = multi_step_solve(N, initial_state, final_state, apex_state, tf, obstacles)
 
     t2 = time.time()
     print("-" * 75)
